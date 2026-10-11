@@ -1,5 +1,11 @@
 # Mind Canvas 安全交接
 
+## v1.0.0 首次發布進行中（2026-10-11）
+
+使用者已驗收並授權本次GitHub推送與Pages首次部署，另明確確認公開Repository。已建立copudy/mind-canvas，帳號copudy具admin／push權限，repo／workflow認證有效，Actions開啟，Pages來源workflow。下方安全收尾段落為歷史；現行授權以本段為準。
+
+尚待首次Push／Actions／正式網站驗證完成。版本1.0.0，保留main全部歷史；未覆蓋Tag。發布前本機正式建置、52單元、42瀏覽器流程通過，敏感檔案與全Git歷史常見秘密掃描無命中；作者使用GitHub noreply電郵。未修改UI／文件資料模型。部署及更新SOP見RELEASE_SOP.md；正式結果完成後追加。
+
 更新：2026-10-11（Asia/Taipei）。**尚未正式部署。未 Git Push、未建立遠端 Repository、未發布 Release。**
 
 ## 目前狀態與驗收
