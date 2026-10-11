@@ -1,4 +1,23 @@
-# 正式上線前準備（尚未發布）
+# Mind Canvas v1.0.0 部署紀錄
+
+2026-10-11，A／實測：首次部署完成。
+
+- 正式網址：https://copudy.github.io/mind-canvas/
+- 公開Repository：https://github.com/copudy/mind-canvas
+- 分支main；Tag v1.0.0（annotated），Commit `40f576f38143426e033224f1db17407b804c1cba`。
+- Actions：https://github.com/copudy/mind-canvas/actions/runs/38135027542 ，build 28秒、deploy 10秒，兩者success。
+- 官方Actions以核對過的SHA固定於.github/workflows/pages.yml；Node24、npm ci、52單元、正式建置、Pages artifact／OIDC部署。產品／建置變更自動部署，文件／截圖不觸發，可手動dispatch。
+- 本機52/52單元、42/42瀏覽器通過；正式隔離Edge2/2通過（12.7秒）。桌面及390×844手機，指南、建立／編輯／切換、Logo、Favicon、PWA圖示、IndexedDB刷新、JSON副本還原、SW範圍與離線重載／寫入／恢復網路均通過。
+- 初始受限執行環境的CLI授權結果不足以判定Token失效；使用者完成官方登入後，在可連網環境確認copudy有效、repo／workflow scopes，以及目標Repository的admin／push權限。沒有要求或輸出秘密。
+- 敏感檔名、追蹤內容、全Git歷史常見秘密掃描均無命中；無環境憑證提交。Git作者使用noreply電郵；保留原歷史與所有既有資料。
+
+待使用者手動驗證：實體手機／其他瀏覽器、OS安裝PWA、正式環境完全關閉瀏覽器後重開、真實儲存逐出／強殺／容量不足。正常刷新與離線已自動驗證，但不代表上述全部通過。
+
+Actions有非阻斷維護提醒：部分官方Pages／artifact Action宣告Node20，由runner以Node24執行；ubuntu-latest近期映像轉換。本次成功，後續授權更新時再核對官方相容性，不在本次擴大升級。
+
+後續版本流程見RELEASE_SOP.md。首次發布Tag固定，完成紀錄的文件Commit不移動它。本機資料需JSON搬到正式origin，Pages公開網址不提供私人存取隔離。其餘已知產品限制見SYSTEM_UX_REPORT.md。
+
+## 以下為部署前準備歷史
 
 目前僅本機原型。以下是準備資料，沒有建立遠端、Git Push 或部署。
 

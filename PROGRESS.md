@@ -1,6 +1,10 @@
 # 開發進度與恢復
 
-目前進度以末節「全站 UI/UX 系統性整頓」及 SYSTEM_UX_REPORT.md 為準。
+## v1.0.0 正式發布完成（最新）
+
+2026-10-11：使用者授權首次發布並確認Public；已完成指定copudy/mind-canvas建立、正常Push main與新v1.0.0 Tag、Actions Pages部署及正式2/2瀏覽器驗證。本機52／42回歸通過。部署Commit40f576f38143426e033224f1db17407b804c1cba、Actions38135027542成功。未改UI或其他PD-1專案，未Force Push。下一步僅使用者手動驗證E項目；後續更新須另授權。接手先讀HANDOFF最新節、DEPLOYMENT及RELEASE_SOP，不重建或重部署。
+
+目前進度以上方「v1.0.0 正式發布完成」及 HANDOFF.md 最新節為準；後續段落為開發歷史。
 
 2026-10-11，第一次原型已交付準備完成，等待使用者驗收。未 Git Push、未建立遠端、未正式部署。
 

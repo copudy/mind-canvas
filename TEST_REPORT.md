@@ -1,5 +1,15 @@
 # 第一次原型測試報告
 
+## v1.0.0 正式發布驗證（最新）
+
+2026-10-11，A：本次發布前52/52單元、42/42完整本機Edge流程、型別與正式建置通過。Actions 38135027542再次執行npm ci／單元／正式建置並成功部署，Commit40f576f38143426e033224f1db17407b804c1cba，Tag v1.0.0。
+
+A：正式https://copudy.github.io/mind-canvas/隔離Edge 2/2流程通過（12.7秒）。標題Mind Canvas、Logo／Favicon／manifest圖示、首次指南、建立白板、計算機0.1+0.2→0.3、結果節點文字編輯、JSON匯出／匯入副本、刷新回指南與繼續上次、IndexedDB內容恢復、SW scope=/mind-canvas/、離線重載與運算1200+300→1500保存、恢復網路再刷新仍為1500。390×844手機可開指南及建立白板。截圖artifacts/production-desktop.png與production-mobile.png。所有操作使用測試profile，不清除使用者本機資料。
+
+E／待使用者手動驗證：OS PWA安裝、實體手機與其他瀏覽器、正式環境整個瀏覽器關閉重開、真實逐出／配額／斷電／強殺。只有本機持久profile的關閉重開已測過，不混作正式測試。
+
+機制與既有限制未變；全部JSON備份不包含側欄分類偏好。首次Actions的Node20／runner映像提醒不阻擋成功，後續維護時再核對。完整部署記錄見DEPLOYMENT.md。
+
 目前版本請讀本文件最新「全站 UI/UX 整頓」結果及 SYSTEM_UX_REPORT.md；前段保留各階段測試歷史。
 
 ## 全站 UI/UX 整頓（最終結果）

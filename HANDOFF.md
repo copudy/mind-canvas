@@ -1,12 +1,18 @@
 # Mind Canvas 安全交接
 
-## v1.0.0 首次發布進行中（2026-10-11）
+## v1.0.0 首次發布已完成（2026-10-11）
 
 使用者已驗收並授權本次GitHub推送與Pages首次部署，另明確確認公開Repository。已建立copudy/mind-canvas，帳號copudy具admin／push權限，repo／workflow認證有效，Actions開啟，Pages來源workflow。下方安全收尾段落為歷史；現行授權以本段為準。
 
-尚待首次Push／Actions／正式網站驗證完成。版本1.0.0，保留main全部歷史；未覆蓋Tag。發布前本機正式建置、52單元、42瀏覽器流程通過，敏感檔案與全Git歷史常見秘密掃描無命中；作者使用GitHub noreply電郵。未修改UI／文件資料模型。部署及更新SOP見RELEASE_SOP.md；正式結果完成後追加。
+正式網站：https://copudy.github.io/mind-canvas/ 。Repository：https://github.com/copudy/mind-canvas （Public）。origin=https://github.com/copudy/mind-canvas.git，分支main，annotated Tag v1.0.0 指向發布／部署Commit `40f576f38143426e033224f1db17407b804c1cba`。Actions https://github.com/copudy/mind-canvas/actions/runs/38135027542 build及deploy皆success。
 
-更新：2026-10-11（Asia/Taipei）。**尚未正式部署。未 Git Push、未建立遠端 Repository、未發布 Release。**
+版本1.0.0，保留全部歷史，未Force Push或覆蓋Tag。發布前本機正式建置、52單元、42瀏覽器流程通過；正式Edge桌面／手機2流程通過，含指南、建立／編輯／切換、IndexedDB刷新恢復、JSON匯出與匯入副本、Logo／Favicon／PWA圖示、SW子路徑與離線重載／保存／上線恢復。敏感檔案與全Git歷史常見秘密掃描無命中；作者使用GitHub noreply電郵。未修改UI／文件資料模型。詳見DEPLOYMENT.md與TEST_REPORT.md，更新SOP見RELEASE_SOP.md。
+
+待使用者手動驗證：實體手機、OS安裝PWA、正式環境完全關閉瀏覽器後重開、真實儲存逐出／容量不足／強殺。已知限制沿用SYSTEM_UX_REPORT；全部JSON備份不含側欄分類偏好。本機與正式資料獨立，須JSON移轉。
+
+下一Session先讀本節並核對git status／log／remote及遠端Tag；文件完成紀錄會有後續Commit，但v1.0.0固定不移動。此次授權已完成，後續發布或UI修改須另有指示。不要自動重部署，不重建專案，不清除IndexedDB。
+
+以下為2026-10-11上一階段安全收尾歷史，當時尚未部署；現況以上方已完成發布紀錄為準。本次建立Tag但未另外發布GitHub Release。
 
 ## 目前狀態與驗收
 
