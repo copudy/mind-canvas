@@ -23,6 +23,19 @@ export const repository = {
     await tx.store.put(clone(board));
     await tx.done;
   },
+  async saveMany(boards: Board[]) {
+    const d = await db(),
+      tx = d.transaction("boards", "readwrite");
+    try {
+      for (const board of boards) await tx.store.put(clone(board));
+      await tx.done;
+    } catch (error) {
+      try {
+        tx.abort();
+      } catch {}
+      throw error;
+    }
+  },
   async remove(boardId: string) {
     const d = await db(),
       tx = d.transaction("boards", "readwrite");

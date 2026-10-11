@@ -24,6 +24,7 @@ export function useWorkspace() {
     timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined),
     pending = useRef<Board | null>(null),
     queue = useRef(Promise.resolve()),
+    failed = useRef(new Map<string, Board>()),
     revision = useRef(0);
   const sync = (b: Board) => {
     current.current = b;
@@ -41,12 +42,21 @@ export function useWorkspace() {
       .catch(() => {})
       .then(() => repository.save(b))
       .then(() => {
+        failed.current.delete(b.boardId);
         if (rev === revision.current) {
-          setStatus("已儲存於此裝置");
-          setError("");
+          if (failed.current.size) {
+            setStatus("儲存失敗");
+            setError(
+              `仍有 ${failed.current.size} 張白板未儲存。請立即匯出全部備份。`,
+            );
+          } else {
+            setStatus("已儲存於此裝置");
+            setError("");
+          }
         }
       })
       .catch((e) => {
+        failed.current.set(b.boardId, b);
         setStatus("儲存失敗");
         setError(
           `儲存失敗：${e instanceof Error ? e.message : String(e)}。請立即匯出 JSON 備份。`,
@@ -64,6 +74,8 @@ export function useWorkspace() {
     return queue.current;
   };
   const schedule = (b: Board) => {
+    // A completed older write must never announce a newer edit as saved.
+    revision.current++;
     setStatus("尚未儲存");
     pending.current = clone(b);
     if (timer.current) clearTimeout(timer.current);
@@ -189,6 +201,7 @@ export function useWorkspace() {
     await flush();
     try {
       await repository.remove(bid);
+      failed.current.delete(bid);
       all.current = all.current.filter((b) => b.boardId !== bid);
       histories.current.delete(bid);
       if (!all.current.length) await add();
@@ -217,14 +230,19 @@ export function useWorkspace() {
       if (file.size > 20_000_000) throw new Error("檔案超過 20 MB");
       const imported = importProject(await file.text());
       await flush();
-      for (const b of imported) {
-        await repository.save(b);
-        all.current.push(b);
-      }
+      await repository.saveMany(imported);
+      all.current.push(...imported);
       sync(imported[0]);
       await repository.active(imported[0].boardId);
-      setStatus("已儲存於此裝置");
-      setError("");
+      if (failed.current.size) {
+        setStatus("儲存失敗");
+        setError(
+          `仍有 ${failed.current.size} 張白板未儲存。請立即匯出全部備份。`,
+        );
+      } else {
+        setStatus("已儲存於此裝置");
+        setError("");
+      }
     } catch (e) {
       setError(`匯入失敗：${e instanceof Error ? e.message : String(e)}`);
     }

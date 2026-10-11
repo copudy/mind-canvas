@@ -484,6 +484,7 @@ h1 {
   display: flex;
   flex-direction: row;
 }
+.react-flow__controls.bottom { bottom: 38px; }
 .react-flow__controls-button {
   background: var(--panel);
   border: 0;
@@ -1092,7 +1093,15 @@ kbd {
     max-width: 155px;
   }
   .save-status {
-    display: none;
+    display: flex;
+    position: fixed;
+    bottom: 12px;
+    left: 12px;
+    font-size: 9px;
+    padding: 5px 8px;
+    background: var(--panel);
+    border-radius: 5px;
+    z-index: 13;
   }
   .top-actions {
     gap: 0;

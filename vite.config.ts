@@ -3,10 +3,30 @@ import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 export default defineConfig({
   base: "./",
+  server:{watch:{ignored:['**/playwright-report/**','**/test-results/**','**/artifacts/**']}},
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(moduleId) {
+          if (moduleId.includes("node_modules")) {
+            if (
+              moduleId.includes("@xyflow") ||
+              moduleId.includes("d3-") ||
+              moduleId.includes("zustand")
+            )
+              return "canvas";
+            if (moduleId.includes("react") || moduleId.includes("scheduler"))
+              return "react";
+          }
+        },
+      },
+    },
+  },
   plugins: [
     react(),
     VitePWA({
       registerType: "prompt",
+      injectRegister: null,
       includeAssets: ["icon.svg", "icon-192.png", "icon-512.png"],
       manifest: {
         name: "Freeform Mind Canvas",
@@ -30,7 +50,8 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
+        clientsClaim: true,
+        globPatterns: ["**/*.{js,css,html,svg,png,woff2,txt}"],
         navigateFallback: "index.html",
       },
     }),

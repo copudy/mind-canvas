@@ -9,6 +9,9 @@ export default function Connector({
   style,
   selected,
 }: EdgeProps<FlowEdge>) {
+  // When geometry has no safe route, preserve the relation but don't draw
+  // through text. The canvas displays an explicit, actionable warning.
+  if (data?.blocked) return null;
   return (
     <>
       <BaseEdge

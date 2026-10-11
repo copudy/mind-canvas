@@ -111,6 +111,7 @@ export function makeBoard(name = "未命名白板"): Board {
 }
 export function demoBoard(): Board {
   const b = makeBoard("週末旅行 · 靈感工作台");
+  b.viewport = { x: 35, y: 85, zoom: 0.78 };
   const root = makeItem("mind", { x: 150, y: 235 }, "一場剛剛好的旅行");
   root.bold = true;
   root.background = "#e0eee7";

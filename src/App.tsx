@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -7,6 +7,7 @@ import {
   MiniMap,
   Controls,
   ConnectionMode,
+  ConnectionLineType,
   SelectionMode,
   useReactFlow,
   type NodeChange,
@@ -48,6 +49,12 @@ import CanvasNode, {
 } from "./components/CanvasNode";
 import Connector, { type FlowEdge } from "./components/Connector";
 import Sidebar from "./components/Sidebar";
+import FloatingCalculator from "./components/FloatingCalculator";
+import {
+  HelpDialog,
+  CommandDialog,
+  DeleteBoardDialog,
+} from "./components/WorkbenchDialogs";
 import Inspector from "./components/Inspector";
 import { useWorkspace } from "./useWorkspace";
 import {
@@ -69,7 +76,7 @@ import {
   type Relation,
 } from "./model";
 import { layoutTree, snapPosition } from "./layout";
-import { routeConnector, rectOf } from "./router";
+import { useCanvasGraph } from "./useCanvasGraph";
 import { autosize } from "./measure";
 const nodeTypes = { canvas: CanvasNode },
   edgeTypes = { orthogonal: Connector };
@@ -111,13 +118,6 @@ function Workbench() {
     [notice, setNotice] = useState(""),
     [inspector, setInspector] = useState(true),
     [online, setOnline] = useState(navigator.onLine);
-  const [floatingPosition, setFloatingPosition] = useState({ x: 0, y: 0 });
-  const floatingDrag = useRef<{
-    x: number;
-    y: number;
-    px: number;
-    py: number;
-  } | null>(null);
   const drag = useRef<DragState | null>(null),
     copyBuffer = useRef<Board | null>(null),
     importInput = useRef<HTMLInputElement>(null),
@@ -340,86 +340,12 @@ function Workbench() {
     });
     setConnectSource(null);
   };
-  const hidden = useMemo(
-    () => (ws.board ? hiddenIds(ws.board) : new Set<string>()),
-    [ws.board],
+  const { hidden, visible, nodes, edges, blocked } = useCanvasGraph(
+    ws.board,
+    selected,
+    selectedEdge,
+    mount,
   );
-  const visible = ws.board?.nodes.filter((n) => !hidden.has(n.id)) || [];
-  const nodes: FlowNode[] = visible.map((n) => ({
-    id: n.id,
-    type: "canvas",
-    position: n.position,
-    width: n.width,
-    height: n.height,
-    style: { width: n.width, height: n.height },
-    selected: selected.includes(n.id),
-    data: {
-      item: n,
-      mountPreview:
-        mount?.id === n.id
-          ? `掛載 · 第 ${mount.index + 1} 個子節點`
-          : undefined,
-    },
-    draggable: true,
-  }));
-  const geometry = JSON.stringify([
-    visible.map((n) => [n.id, n.position, n.width, n.height, n.parentId]),
-    ws.board?.relations,
-    ws.board?.treeStyle,
-  ]);
-  const routed = useMemo(() => {
-    if (!ws.board) return [];
-    const map = new Map(visible.map((n) => [n.id, n]));
-    const relations = [
-      ...ws.board.relations.map((r) => ({ ...r, tree: false })),
-      ...visible
-        .filter((n) => n.parentId && map.has(n.parentId))
-        .map((n) => ({
-          id: `tree:${n.id}`,
-          source: n.parentId!,
-          target: n.id,
-          ...ws.board!.treeStyle,
-          tree: true,
-          sourceSide: undefined,
-          targetSide: undefined,
-          waypoints: undefined,
-        })),
-    ];
-    return relations
-      .filter((r) => map.has(r.source) && map.has(r.target))
-      .map((r) => {
-        const a = map.get(r.source)!,
-          b = map.get(r.target)!;
-        const route = routeConnector(
-          rectOf(a),
-          rectOf(b),
-          visible.filter((n) => n.id !== a.id && n.id !== b.id).map(rectOf),
-          r.sourceSide,
-          r.targetSide,
-          r.waypoints,
-        );
-        return {
-          id: r.id,
-          type: "orthogonal" as const,
-          source: r.source,
-          target: r.target,
-          sourceHandle: route.sourceSide,
-          targetHandle: route.targetSide,
-          selectable: !r.tree,
-          data: { path: route.path, blocked: route.blocked, tree: r.tree },
-          style: {
-            stroke: r.color,
-            strokeWidth: r.width,
-            strokeDasharray: r.dashed ? "7 5" : undefined,
-          },
-        };
-      });
-  }, [geometry]);
-  const edges: FlowEdge[] = routed.map((e) => ({
-    ...e,
-    selected: selectedEdge === e.id,
-  }));
-  const blocked = routed.filter((e) => e.data.blocked).length;
   const changes = (changes: NodeChange<FlowNode>[]) => {
     const selections = changes.filter((c) => c.type === "select");
     if (selections.length)
@@ -812,6 +738,7 @@ function Workbench() {
               }}
               onConnect={(c) => addRelation(c.source, c.target, c)}
               connectionMode={ConnectionMode.Loose}
+              connectionLineType={ConnectionLineType.SmoothStep}
               isValidConnection={(c) => c.source !== c.target}
               onNodeDragStart={startDrag}
               onNodeDrag={moveDrag}
@@ -959,10 +886,12 @@ function Workbench() {
                 <Redo2 size={19} />
               </button>
             </div>
-            <div className="canvas-heading">
-              <span>THINK WITHOUT BOUNDARIES</span>
-              <p>讓想法自由生長</p>
-            </div>
+            {visible.length === 0 && (
+              <div className="canvas-heading">
+                <span>THINK WITHOUT BOUNDARIES</span>
+                <p>讓想法自由生長</p>
+              </div>
+            )}
             <div className="canvas-bottom">
               <span>
                 {visible.length} 個物件 · {selected.length} 個選取
@@ -983,7 +912,7 @@ function Workbench() {
             </div>
             {blocked > 0 && (
               <div className="route-warning" role="status">
-                {blocked} 條連線端點受遮擋；請分開重疊物件。
+                {blocked} 條連線暫停顯示：端點受遮擋，請分開重疊物件。
               </div>
             )}
             {selectedItem?.kind === "mind" && (
@@ -1050,67 +979,28 @@ function Workbench() {
                   ws.update((b) => reparent(b, selected[0], null))
                 }
                 onAlign={align}
+                onTreeStyle={(p) =>
+                  ws.update((b) => Object.assign(b.treeStyle, p))
+                }
               />
             )}
             {floating && (
-              <div
-                className="floating-calculator"
-                style={{
-                  transform: `translate(${floatingPosition.x}px,${floatingPosition.y}px)`,
+              <FloatingCalculator
+                item={floating}
+                onChange={setFloating}
+                onInsert={() => insertResult(floating.result)}
+                onClose={() => setFloating(null)}
+                onPin={() => {
+                  const n = {
+                    ...clone(floating),
+                    id: id(),
+                    position: center(),
+                  };
+                  ws.update((b) => b.nodes.push(n));
+                  setFloating(null);
+                  setSelected([n.id]);
                 }}
-              >
-                <div
-                  className="floating-title"
-                  onPointerDown={(e) => {
-                    if ((e.target as HTMLElement).closest("button")) return;
-                    e.currentTarget.setPointerCapture(e.pointerId);
-                    floatingDrag.current = {
-                      x: e.clientX,
-                      y: e.clientY,
-                      px: floatingPosition.x,
-                      py: floatingPosition.y,
-                    };
-                  }}
-                  onPointerMove={(e) => {
-                    const d = floatingDrag.current;
-                    if (d)
-                      setFloatingPosition({
-                        x: d.px + e.clientX - d.x,
-                        y: d.py + e.clientY - d.y,
-                      });
-                  }}
-                  onPointerUp={() => (floatingDrag.current = null)}
-                >
-                  <span>⠿ 浮動計算機</span>
-                  <button
-                    aria-label="釘選浮動計算機"
-                    title="釘選到畫布"
-                    onClick={() => {
-                      const n = {
-                        ...clone(floating),
-                        id: id(),
-                        position: center(),
-                      };
-                      ws.update((b) => b.nodes.push(n));
-                      setFloating(null);
-                      setSelected([n.id]);
-                    }}
-                  >
-                    <Pin size={16} />
-                  </button>
-                  <button
-                    aria-label="關閉浮動計算機"
-                    onClick={() => setFloating(null)}
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
-                <Calculator
-                  item={floating}
-                  onChange={(p) => setFloating({ ...floating, ...p })}
-                  onInsert={() => insertResult(floating.result)}
-                />
-              </div>
+              />
             )}
           </div>
         </main>
@@ -1137,159 +1027,46 @@ function Workbench() {
           </div>
         )}
         {deleteBoard && (
-          <div className="modal-backdrop">
-            <div className="modal" role="dialog" aria-label="確認刪除白板">
-              <h2>刪除這張白板？</h2>
-              <p>
-                「{ws.boards.find((b) => b.boardId === deleteBoard)?.name}
-                」將從此裝置刪除。此操作無法復原，建議先匯出備份。
-              </p>
-              <div className="modal-actions">
-                <button onClick={() => setDeleteBoard(null)}>取消</button>
-                <button onClick={() => void ws.backup(true)}>先備份全部</button>
-                <button
-                  className="danger"
-                  onClick={() => {
-                    void ws.remove(deleteBoard);
-                    setDeleteBoard(null);
-                  }}
-                >
-                  確認刪除
-                </button>
-              </div>
-            </div>
-          </div>
+          <DeleteBoardDialog
+            name={ws.boards.find((b) => b.boardId === deleteBoard)?.name || ""}
+            close={() => setDeleteBoard(null)}
+            backup={() => void ws.backup(true)}
+            confirm={() => {
+              void ws.remove(deleteBoard);
+              setDeleteBoard(null);
+            }}
+          />
         )}
-        {help && (
-          <div className="modal-backdrop" onClick={() => setHelp(false)}>
-            <div
-              className="modal help-modal"
-              role="dialog"
-              aria-label="操作說明"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                className="modal-close"
-                aria-label="關閉操作說明"
-                onClick={() => setHelp(false)}
-              >
-                <X size={19} />
-              </button>
-              <span className="eyebrow">A LITTLE ROOM FOR BIG IDEAS</span>
-              <h2>開始自由思考</h2>
-              <p>同一張白板，可以有很多棵心智圖，也可以什麼都不連。</p>
-              <div className="help-grid">
-                <div>
-                  <h3>創造與編輯</h3>
-                  <p>
-                    工具列新增物件；雙擊或 F2 編輯文字。Ctrl＋Enter 完成，Esc
-                    取消。選取後拖曳邊角調整尺寸。
-                  </p>
-                  <h3>移動與連線</h3>
-                  <p>
-                    空白處拖曳框選，Shift
-                    點擊多選。滑鼠中鍵／右鍵拖曳，或手掌工具平移。Ctrl＋滾輪缩放。拖節點邊緣圓點建立自由關聯線。
-                  </p>
-                </div>
-                <div>
-                  <h3>讓想法長出分支</h3>
-                  <p>
-                    Tab 新增子節點；Enter 新增同層；Shift＋Tab 提升層級；Space
-                    收合。普通拖曳移動整枝；Alt＋拖入節點內重新掛載，綠色預覽顯示插入順序。
-                  </p>
-                  <h3>安全保存</h3>
-                  <p>
-                    Ctrl＋Z 復原，Ctrl＋Shift＋Z 重作；Ctrl＋D
-                    複製分支，Ctrl＋C／V 跨白板複製貼上。JSON
-                    備份保留白板全部資料。清除瀏覽器網站資料會移除本機白板。
-                  </p>
-                </div>
-              </div>
-              <p className="help-note">
-                首次線上載入正式建置後可離線開啟；開發模式不啟用離線快取。計算機的百分比採除以
-                100；不支援隱含乘法。
-              </p>
-              <button className="primary" onClick={() => setHelp(false)}>
-                開始思考
-              </button>
-            </div>
-          </div>
-        )}
+        {help && <HelpDialog close={() => setHelp(false)} />}
         {command && (
-          <div className="modal-backdrop" onClick={() => setCommand(false)}>
-            <div
-              className="command-menu"
-              role="dialog"
-              aria-label="快速命令"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <label>
-                <Search size={20} />
-                <input
-                  autoFocus
-                  aria-label="搜尋節點與命令"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="搜尋節點，或找一個動作…"
-                  onKeyDown={(e) => {
-                    if (e.key === "Escape") setCommand(false);
-                  }}
-                />
-                <button aria-label="關閉命令" onClick={() => setCommand(false)}>
-                  <X size={17} />
-                </button>
-              </label>
-              <div className="command-results">
-                {commands
-                  .filter((c) => c.label.includes(query))
-                  .map((c) => (
-                    <button
-                      key={c.label}
-                      onClick={() => {
-                        setCommand(false);
-                        c.run();
-                      }}
-                    >
-                      <Plus size={16} />
-                      {c.label}
-                    </button>
-                  ))}
-                {board.nodes
-                  .filter((n) => query && n.text.includes(query))
-                  .slice(0, 30)
-                  .map((n) => (
-                    <button
-                      key={n.id}
-                      onClick={() => {
-                        if (hidden.has(n.id))
-                          ws.update((b) => {
-                            let p = n.parentId;
-                            while (p) {
-                              const parent = b.nodes.find((x) => x.id === p)!;
-                              parent.collapsed = false;
-                              p = parent.parentId;
-                            }
-                          });
-                        setSelected([n.id]);
-                        setCommand(false);
-                        setTimeout(
-                          () =>
-                            void rf.fitView({
-                              nodes: [{ id: n.id }],
-                              maxZoom: 1,
-                              duration: 200,
-                            }),
-                          50,
-                        );
-                      }}
-                    >
-                      <LocateFixed size={16} />
-                      {n.text.slice(0, 60)}
-                    </button>
-                  ))}
-              </div>
-            </div>
-          </div>
+          <CommandDialog
+            query={query}
+            setQuery={setQuery}
+            close={() => setCommand(false)}
+            commands={commands}
+            nodes={board.nodes}
+            onLocate={(n) => {
+              if (hidden.has(n.id))
+                ws.update((b) => {
+                  let p = n.parentId;
+                  while (p) {
+                    const parent = b.nodes.find((x) => x.id === p)!;
+                    parent.collapsed = false;
+                    p = parent.parentId;
+                  }
+                });
+              setSelected([n.id]);
+              setTimeout(
+                () =>
+                  void rf.fitView({
+                    nodes: [{ id: n.id }],
+                    maxZoom: 1,
+                    duration: 200,
+                  }),
+                50,
+              );
+            }}
+          />
         )}
       </div>
     </CanvasContext.Provider>

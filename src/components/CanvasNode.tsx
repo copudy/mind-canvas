@@ -9,6 +9,7 @@ import {
 import {
   Handle,
   NodeResizer,
+  useUpdateNodeInternals,
   Position,
   type Node,
   type NodeProps,
@@ -67,10 +68,18 @@ export function Calculator({
       return;
     }
     if (key === "⌫") {
-      onChange({ expression: item.expression.slice(0, -1) });
+      onChange({
+        expression: item.expression.slice(0, -1),
+        result: "",
+        calcError: "",
+      });
       return;
     }
-    onChange({ expression: (item.expression + key).slice(0, 500) });
+    onChange({
+      expression: (item.expression + key).slice(0, 500),
+      result: "",
+      calcError: "",
+    });
     input.current?.focus();
   };
   return (
@@ -99,7 +108,10 @@ export function Calculator({
         maxLength={500}
         onFocus={() => actions?.checkpoint()}
         onChange={(e) =>
-          onChange({ expression: e.target.value, calcError: "" }, false)
+          onChange(
+            { expression: e.target.value, result: "", calcError: "" },
+            false,
+          )
         }
         onKeyDown={(e) => {
           if (e.key === "Enter") {
@@ -179,6 +191,10 @@ export default function CanvasNode({
   const item = data.item,
     actions = useContext(CanvasContext),
     editing = actions.editId === id;
+  const updateInternals = useUpdateNodeInternals();
+  useEffect(() => {
+    updateInternals(id);
+  }, [id, item.width, item.height, updateInternals]);
   const [draft, setDraft] = useState(item.text);
   const textarea = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
@@ -210,11 +226,17 @@ export default function CanvasNode({
         isVisible={selected && !editing}
         minWidth={item.kind === "calculator" ? 260 : 80}
         minHeight={item.kind === "calculator" ? 335 : 40}
+        maxWidth={3000}
+        maxHeight={3000}
         onResizeStart={actions.checkpoint}
         onResize={(_, p) =>
           actions.patch(
             id,
-            { width: p.width, height: p.height, autoSize: false },
+            {
+              width: Math.max(item.kind === "calculator" ? 260 : 80, p.width),
+              height: Math.max(item.kind === "calculator" ? 335 : 40, p.height),
+              autoSize: false,
+            },
             false,
           )
         }

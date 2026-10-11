@@ -32,6 +32,7 @@ export default function Inspector({
   onDelete,
   onDetach,
   onAlign,
+  onTreeStyle,
 }: {
   items: Item[];
   relation?: Relation;
@@ -46,6 +47,7 @@ export default function Inspector({
   onDelete: () => void;
   onDetach: () => void;
   onAlign: (mode: "left" | "center" | "right") => void;
+  onTreeStyle: (patch: Partial<Board["treeStyle"]>) => void;
 }) {
   const item = items[0];
   return (
@@ -228,6 +230,35 @@ export default function Inspector({
             {item.kind === "mind" && (
               <>
                 <div className="inspector-section">局部心智圖</div>
+                <label>
+                  父子線顏色
+                  <input
+                    aria-label="父子線顏色"
+                    type="color"
+                    value={board.treeStyle.color}
+                    onChange={(e) => onTreeStyle({ color: e.target.value })}
+                  />
+                </label>
+                <label>
+                  父子線粗細
+                  <input
+                    aria-label="父子線粗細"
+                    type="range"
+                    min="1"
+                    max="8"
+                    value={board.treeStyle.width}
+                    onChange={(e) => onTreeStyle({ width: +e.target.value })}
+                  />
+                </label>
+                <label>
+                  父子線虛線
+                  <input
+                    aria-label="父子線虛線"
+                    type="checkbox"
+                    checked={board.treeStyle.dashed}
+                    onChange={(e) => onTreeStyle({ dashed: e.target.checked })}
+                  />
+                </label>
                 <button className="wide" onClick={onChild}>
                   <Plus size={15} />
                   新增子節點 <kbd>Tab</kbd>
