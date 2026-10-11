@@ -3,7 +3,15 @@ import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 export default defineConfig({
   base: "./",
-  server:{watch:{ignored:['**/playwright-report/**','**/test-results/**','**/artifacts/**']}},
+  server: {
+    watch: {
+      ignored: [
+        "**/playwright-report/**",
+        "**/test-results/**",
+        "**/artifacts/**",
+      ],
+    },
+  },
   build: {
     rollupOptions: {
       output: {

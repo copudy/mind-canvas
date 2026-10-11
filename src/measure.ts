@@ -28,8 +28,11 @@ export function autosize(n: Item) {
     n.maxWidth,
     Math.max(n.kind === "sticky" ? 170 : 90, Math.ceil(widest + pad)),
   );
-  n.height = Math.max(
-    n.kind === "sticky" ? 100 : 48,
-    Math.ceil(lines * n.fontSize * 1.55 + pad),
+  n.height = Math.min(
+    3000,
+    Math.max(
+      n.kind === "sticky" ? 100 : 48,
+      Math.ceil(lines * n.fontSize * 1.55 + pad),
+    ),
   );
 }

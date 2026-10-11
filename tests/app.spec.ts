@@ -334,6 +334,27 @@ test("mobile viewport supports text editing and theme toggle", async ({
   await expect(page.getByText("手機基本編輯", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "切換深色主題", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  const contrast = await node(page, "手機基本編輯")
+    .locator(".node-text")
+    .evaluate((el) => {
+      const luminance = (color: string) => {
+        const values = color
+          .match(/\d+/g)!
+          .slice(0, 3)
+          .map((x) => {
+            const v = +x / 255;
+            return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+          });
+        return 0.2126 * values[0] + 0.7152 * values[1] + 0.0722 * values[2];
+      };
+      const a = luminance(getComputedStyle(el).color),
+        b = luminance(
+          getComputedStyle(document.querySelector(".canvas-surface")!)
+            .backgroundColor,
+        );
+      return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+    });
+  expect(contrast).toBeGreaterThanOrEqual(4.5);
   await saved(page);
   await page.screenshot({ path: "artifacts/mobile.png" });
 });
@@ -650,7 +671,34 @@ test("final desktop prototype visual and connectors styles", async ({
   await page.locator(".canvas-surface").focus();
   await page.keyboard.press("Control+z");
   await saved(page);
-  await page.locator('.canvas-surface').focus();
-  await page.keyboard.press('Escape');
+  await page.locator(".canvas-surface").focus();
+  await page.keyboard.press("Escape");
   await page.screenshot({ path: "artifacts/desktop.png" });
+});
+test("long multiline auto-size remains exportable and fully restores", async ({
+  page,
+}) => {
+  await ready(page);
+  await page.getByRole("button", { name: "新的白板 ＋", exact: true }).click();
+  await page.getByRole("button", { name: "新增自由文字", exact: true }).click();
+  const text = Array.from(
+    { length: 300 },
+    (_, i) => `第 ${i + 1} 行長文字與思考`,
+  ).join("\n");
+  await edit(page, text);
+  await saved(page);
+  const b = (await readBoards(page)).find((b) => b.name === "新的白板");
+  expect(b.nodes[0].height).toBeLessThanOrEqual(3000);
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "匯出本白板", exact: true }).click();
+  const file = await (await download).path();
+  await page.locator("input[type=file]").setInputFiles(file!);
+  await expect(
+    page.getByRole("heading", { name: "新的白板（匯入）" }),
+  ).toBeVisible();
+  await saved(page);
+  expect(
+    (await readBoards(page)).find((b) => b.name === "新的白板（匯入）").nodes[0]
+      .text,
+  ).toBe(text);
 });

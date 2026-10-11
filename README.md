@@ -6,6 +6,8 @@
 
 需要 Node.js 22.12+（本機驗證版本 24.14.1）、npm 與現代瀏覽器。
 
+Windows 可雙擊 START_PREVIEW.cmd，等待建置後開啟顯示的 4173 本機網址；保持該視窗開啟。也可使用下列命令。
+
 ```powershell
 npm.cmd ci
 npm.cmd run dev -- --port 5173 --strictPort
@@ -43,6 +45,10 @@ npm.cmd run test:e2e
 ```
 
 測試及限制見 TEST_REPORT.md，驗收清單見 ACCEPTANCE.md，開發恢復見 PROGRESS.md。
+
+完整第一次交付報告見 BUILD_REPORT.md。瀏覽器測試直接使用正式建置，先執行 build；使用已安裝 Edge（隔離測試資料），預覽 4173 與子目錄 4174 由測試設定啟動。29 個第三方套件授權文字在 public/THIRD_PARTY_NOTICES.txt；依賴更新後執行 `node scripts/licenses.mjs` 重新產生。
+
+支援的瀏覽器可透過其安裝選項安裝此 PWA；實際作業系統安裝尚未驗證。manifest／圖示／離線重新開啟已實測。
 
 ## 發布狀態
 

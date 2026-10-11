@@ -22,11 +22,13 @@
 - `layout.ts` Layout Engine：局部子樹計算 span，向右／左右／放射，跳過 Pinned／Free，避開已占用矩形；拖曳智慧吸附。
 - `router.ts` Connector Router：四向外框 ports、20px stubs，矩形障礙膨脹 12px，直角格點 A* 搜尋、轉折懲罰、折線簡化，SVG A 圓弧半徑最多 10px。
 - `components/CanvasNode.tsx`／`Connector.tsx`：自訂 XYFlow 畫面；節點輸入、尺寸與連線。
+- `useCanvasGraph.ts`：模型轉 renderer nodes／edges，尺寸同步 measured；依幾何變化快取路由，避免文字／計算機輸入反覆重算。
 - `history.ts` Command History：每白板獨立 snapshot Undo／Redo，最多 100 次；拖曳、尺寸與文字輸入以操作起點記錄。
 - `useWorkspace.ts` Workspace Manager：工作集、切換、命名、複製、刪除、匯入匯出；保存佇列＋400ms debounce，切换／隱藏前 flush。
 - `storage.ts` Storage Repository：IndexedDB boards／meta；交易完成後顯示成功；JSON 格式、型別、範圍、引用、循環、數量驗證。
 - `calculator.ts` Calculator Engine：受限遞迴下降解析、優先順序、單元正負號、括號、百分比，拒絕非法字元／除零／極端範圍。
 - `App.tsx` 協調畫布事件、操作與 UI；`Sidebar`、`Inspector` 分離管理 UI。
+- `FloatingCalculator`、`WorkbenchDialogs`：浮動工具與命令／說明／刪除確認分離。
 
 ## 文件 v1
 
@@ -37,6 +39,8 @@
 匯入外層 `{format:'freeform-mind-canvas',schemaVersion:1,boards:[...]}`。只接受 v1；未來 migration 需明確增加，不能默默當成 v1。上限每白板 2000 節點／5000 關聯、100 張匯入、20 MB 檔案；不是該規模的效能保證。
 
 ## 限制與可逆性
+
+最後實作補充：無安全路徑時保留關係、暫停繪線並顯示警告，不画穿文字。
 
 完全包覆／重疊可能讓外框連線在幾何上無法完全避障，會顯示警告；不宣稱此時路由無碰撞。路由優先選短外框組合與可行路径，未做全圖交叉／共用線束最小化。Pinned 是排版位置固定，仍允許使用者主動拖曳。普通拖曳整枝改為 Free；Alt 必須在目標內部才掛載，防循環，歷史可復原。白板刪除需 UI 明確確認，無 Undo；物件刪除有 Undo。
 

@@ -213,7 +213,10 @@ export default function CanvasNode({
   const style: CSSProperties = {
     background: item.background,
     borderColor: item.border,
-    color: item.color,
+    color:
+      item.background === "transparent" && item.color === "#293b35"
+        ? "var(--ink)"
+        : item.color,
     fontSize: item.fontSize,
     fontWeight: item.bold ? 600 : 400,
   };
