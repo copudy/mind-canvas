@@ -1,5 +1,18 @@
 # Mind Canvas v1.0.0 部署紀錄
 
+## v1.1.0 發布完成（最新）
+
+- 正式網址：https://copudy.github.io/mind-canvas/ ，公開 Repository：https://github.com/copudy/mind-canvas 。
+- 分支 main；annotated Tag v1.1.0；發布 Commit `be694832d7b542ada290aba4cd66f2be7b9ee63f`。v1.0.0 與原始歷史保留，正常快轉與 Push，未 Force Push。
+- Actions：https://github.com/copudy/mind-canvas/actions/runs/38153553180 ，build／deploy 均 success；沿用既有固定 SHA workflow、Node24 與 Pages 子路徑設定。
+- A：發布前 Lint／Build、59/59 單元、51/51 完整瀏覽器測試通過。正式隔離 Edge 2/2 通過（11.8 秒）：標題 Mind Canvas、品牌資源／圖示、歡迎指南、白板建立編輯、計算機精度、JSON 匯出與副本還原、IndexedDB 刷新／繼續上次、SW scope=/mind-canvas/、離線重載與運算保存、390×844 手機。
+- 敏感檔名、原始碼及 Git 歷史常見秘密標記未命中，沿用 .gitignore，作者 noreply 信箱；此檢查不代表完整安全稽核。
+- E：實體手機、OS PWA 安裝、舊版既有正式瀏覽器的 SW 更新、正式環境完整關閉重開、真實儲存逐出／容量不足／強殺。全部新版功能已本機測試，正式未重跑完整 51 項。
+
+更新時先匯出完整備份；不要清除網站資料。舊快取若未更新，可關閉本站所有分頁再重新開啟／刷新。含我的範本備份容器版本 2，新版支援 1／2，v1.0 拒絕 2。完整備份不含側欄偏好；跨裝置不自動同步。更新 SOP 見 RELEASE_SOP.md，後續版本仍需使用者授權。
+
+以下為 v1.0.0 歷史紀錄。
+
 2026-10-11，A／實測：首次部署完成。
 
 - 正式網址：https://copudy.github.io/mind-canvas/

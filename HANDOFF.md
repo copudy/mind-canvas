@@ -1,5 +1,15 @@
 # Mind Canvas 安全交接
 
+## v1.1.0 正式部署完成（最新）
+
+使用者本次明確授權後已正常推送 main 與 annotated Tag v1.1.0；發布 Commit `be694832d7b542ada290aba4cd66f2be7b9ee63f`。Actions https://github.com/copudy/mind-canvas/actions/runs/38153553180 的 build／deploy 均 success。正式網址 https://copudy.github.io/mind-canvas/ ，公開 Repository https://github.com/copudy/mind-canvas 。v1.0.0 保留、不移動，未 Force Push，未發布額外 GitHub Release。
+
+A／實測：本機 Lint／Build、59/59 單元、51/51 完整瀏覽器回歸通過（4.8 分鐘）；正式隔離 Edge 2/2 通過（11.8 秒），涵蓋桌面／手機指南、標題／Logo／Favicon／PWA 圖示、白板建立編輯、計算機、JSON 副本還原、IndexedDB 刷新、SW 子路徑及離線運算保存。版本與更新 SOP 見 DEPLOYMENT.md／RELEASE_SOP.md；下方等待授權／本機狀態保留為歷史。
+
+E：實體手機／OS 安裝、舊版既有正式 profile 的 SW 更新體驗、真實逐出／容量不足／強殺／斷電尚未驗證。新範本與指南資料遷移已在本機隔離測試通過；正式測試未逐項重跑全部 51 項。IndexedDB 資料保持本機，建議定期完整備份，含範本格式 2 需新版還原。
+
+下一 Session 先讀本節與 git status／log／remote，再依使用者回報處理。此次 v1.1.0 發布授權已完成，後續發布仍需新授權。不自動再次部署、不清除資料、不重新開發。記錄用文件／截圖 Commit 會在發布 Commit 之後，v1.1.0 Tag 不隨文件更新移動。
+
 ## v1.1.0 發布授權與執行（最新）
 
 使用者已明確授權「先這樣 push 上線進行版控」，本次範圍為目前已驗收 v1.1.0 推送、版本標記與 GitHub Pages 部署，不新增功能。沿用公開 copudy/mind-canvas、既有 main 與 Actions。v1.0.0 Tag 不移動；本機成果 b45294b 保留。最終發布 Commit、Actions 與正式測試結果由下方後續完成紀錄補充；目前仍在發布前完整回歸。

@@ -1,5 +1,11 @@
 # 第一次原型測試報告
 
+## v1.1.0 正式驗證完成（最新）
+
+A／實測：Actions 38153553180 build／deploy 成功，發布 Commit be694832d7b542ada290aba4cd66f2be7b9ee63f。正式 https://copudy.github.io/mind-canvas/ 隔離 Edge **2/2 通過（11.8 秒）**，含標題、Logo／Favicon／PWA 圖示、指南、白板建立編輯、計算機、JSON 備份副本還原、IndexedDB 刷新、SW 範圍、離線重載與運算保存、390×844 手機。截圖 artifacts/production-desktop.png／production-mobile.png 已更新。測試不操作使用者 profile。
+
+發布前 59/59 單元與 51/51 本機完整回歸通過，舊的 50/51 待補跑已解決。E／待手動：實體手機／OS 安裝、舊版既有正式 profile 的 SW 更新、正式完整瀏覽器關閉重開、真實逐出／容量不足／斷電／強殺。新版範本／遷移本機通過，正式只執行上述 2 項流程，不混称全套正式通過。
+
 ## v1.1.0 發布前最終回歸（最新）
 
 A／實測：取得本次正式發布授權後，Lint（TypeScript＋Prettier）、正式 PWA Build、59/59 單元與 **51/51 完整 Edge 瀏覽器回歸通過（4.8 分鐘）**。下方本機交付時的 50/51 與待補跑狀態已解決。含指南保護與舊資料保留、六官方與我的範本、JSON 版本 1／2、同 ID 計算機、側欄、離線、儲存錯誤及桌面／手機尺寸。
