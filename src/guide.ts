@@ -95,7 +95,7 @@ export function welcomeBoard(): Board {
     140,
   ).color = "#293b35";
   section(880, 205, "03 把數字也放進思考");
-  const calc = put("calculator", 880, 265, "旅行預算", 280, 340);
+  const calc = put("calculator", 880, 265, "旅行預算", 280, 430);
   calc.expression = "(1800+650)*2";
   calc.result = "4900";
   section(0, 645, "04 自由串起一個流程");
@@ -146,5 +146,7 @@ export function welcomeBoard(): Board {
     130,
   ).color = "#293b35";
   b.guide = { version: 1, greetingId: greeting.id };
+  // Keep the lower teaching areas clear of the larger, readable calculator.
+  for (const n of b.nodes) if (n.position.y >= 645) n.position.y += 100;
   return refreshGreeting(b);
 }

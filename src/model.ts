@@ -70,7 +70,7 @@ export function makeItem(kind: Kind, position: Point, text = ""): Item {
       }[kind],
     position,
     width: kind === "calculator" ? 280 : kind === "sticky" ? 200 : 180,
-    height: kind === "calculator" ? 340 : kind === "sticky" ? 130 : 56,
+    height: kind === "calculator" ? 430 : kind === "sticky" ? 130 : 56,
     autoSize: kind !== "calculator",
     maxWidth: 320,
     parentId: null,

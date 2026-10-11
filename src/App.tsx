@@ -95,8 +95,9 @@ function Workbench() {
   const [selected, setSelected] = useState<string[]>([]),
     [selectedEdge, setSelectedEdge] = useState<string | null>(null),
     [editId, setEdit] = useState<string | null>(null),
-    [sidebar, setSidebar] = useState(true),
+    [sidebar, setSidebar] = useState(() => window.innerWidth > 760),
     [resetGuide, setResetGuide] = useState(false),
+    [exploringGuide, setExploringGuide] = useState(false),
     [dark, setDark] = useState(() => {
       try {
         return localStorage.getItem("mind-theme") === "dark";
@@ -148,6 +149,7 @@ function Workbench() {
   }, []);
   useEffect(() => {
     setSelected([]);
+    setExploringGuide(false);
     setSelectedEdge(null);
     setEdit(null);
     setConnectSource(null);
@@ -209,6 +211,10 @@ function Workbench() {
   };
   const add = (kind: Kind, text?: string, pos?: Point) => {
     const n = makeItem(kind, pos || center(), text);
+    if (kind === "calculator" && !pos) {
+      n.position.x -= n.width / 2 - 80;
+      n.position.y -= n.height / 2 - 30;
+    }
     if (kind === "text" && text === "新的標題") {
       n.bold = true;
       n.fontSize = 26;
@@ -777,9 +783,19 @@ function Workbench() {
       <div className={`workbench ${sidebar ? "with-sidebar" : ""}`}>
         {sidebar && (
           <Sidebar
+            prefs={ws.prefs}
+            onPin={(bid) => void ws.togglePin(bid)}
+            onAddSection={(name) => void ws.addSection(name)}
+            onRenameSection={(sid, name) => void ws.renameSection(sid, name)}
+            onDeleteSection={(sid) => void ws.removeSection(sid)}
+            onCollapseSection={(sid) => void ws.collapseSection(sid)}
+            onMove={(bid, sid) => void ws.moveBoard(bid, sid)}
             boards={ws.boards}
             active={board.boardId}
-            onOpen={(bid) => void ws.open(bid)}
+            onOpen={(bid) => {
+              void ws.open(bid);
+              if (window.innerWidth <= 760) setSidebar(false);
+            }}
             onAdd={() => void ws.add().catch((e) => ws.setError(String(e)))}
             onRename={(bid, name) => void ws.rename(bid, name)}
             onDuplicate={(bid) => void ws.duplicate(bid)}
@@ -885,6 +901,95 @@ function Workbench() {
               </button>
             </div>
           </header>
+          {board.guide && (
+            <section
+              className={`welcome-entry ${exploringGuide ? "exploring" : ""}`}
+              aria-label="歡迎入口"
+            >
+              {exploringGuide ? (
+                <>
+                  <button onClick={() => setExploringGuide(false)}>
+                    回到歡迎入口
+                  </button>
+                  <span>試著拖曳或雙擊便條，滾輪可探索其他區域。</span>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <strong>從這裡開始你的思考</strong>
+                    <p>白板還在目前瀏覽器裡。選一個入口，就能繼續。</p>
+                  </div>
+                  <div className="welcome-actions">
+                    {ws.lastBoard && (
+                      <button
+                        className="continue-board"
+                        onClick={() => void ws.open(ws.lastBoard!.boardId)}
+                      >
+                        <span>繼續上次的白板</span>
+                        <strong>{ws.lastBoard.name}</strong>
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        void ws.add();
+                        if (window.innerWidth <= 760) setSidebar(false);
+                      }}
+                    >
+                      建立新白板
+                    </button>
+                    <button
+                      onClick={() => {
+                        setExploringGuide(true);
+                        if (window.innerWidth <= 760) setSidebar(false);
+                        requestAnimationFrame(() =>
+                          requestAnimationFrame(() => {
+                            const area = document
+                              .querySelector(".canvas-surface")
+                              ?.getBoundingClientRect();
+                            const examples = board.nodes.filter(
+                              (n) =>
+                                n.position.x === 0 &&
+                                n.position.y >= 205 &&
+                                n.position.y < 580,
+                            );
+                            if (!area || !examples.length) return;
+                            const left = Math.min(
+                              ...examples.map((n) => n.position.x),
+                            );
+                            const top = Math.min(
+                              ...examples.map((n) => n.position.y),
+                            );
+                            const width =
+                              Math.max(
+                                ...examples.map((n) => n.position.x + n.width),
+                              ) - left;
+                            const height =
+                              Math.max(
+                                ...examples.map((n) => n.position.y + n.height),
+                              ) - top;
+                            const zoom = Math.max(
+                              0.1,
+                              Math.min(
+                                1,
+                                (area.width - 32) / width,
+                                (area.height - 300) / height,
+                              ),
+                            );
+                            void rf.setViewport(
+                              { x: 16 - left * zoom, y: 16 - top * zoom, zoom },
+                              { duration: 250 },
+                            );
+                          }),
+                        );
+                      }}
+                    >
+                      探索使用指南
+                    </button>
+                  </div>
+                </>
+              )}
+            </section>
+          )}
           <div
             className="canvas-surface"
             tabIndex={-1}
@@ -932,9 +1037,13 @@ function Workbench() {
                 if (ws.current.current?.boardId !== board.boardId) return;
                 const old = ws.current.current?.viewport;
                 if (old && JSON.stringify(old) !== JSON.stringify(v))
-                  ws.update((b) => {
-                    b.viewport = v;
-                  }, false);
+                  ws.update(
+                    (b) => {
+                      b.viewport = v;
+                    },
+                    false,
+                    false,
+                  );
               }}
               defaultViewport={board.viewport}
               minZoom={0.1}
@@ -1140,6 +1249,8 @@ function Workbench() {
                     id: id(),
                     position: center(),
                   };
+                  n.position.x -= n.width / 2 - 80;
+                  n.position.y -= n.height / 2 - 30;
                   ws.update((b) => b.nodes.push(n));
                   setFloating(null);
                   setSelected([n.id]);

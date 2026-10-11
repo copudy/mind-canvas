@@ -34,8 +34,15 @@ async function ready(page: Page, url = "/") {
     db.close();
     return true;
   }, demoBoard());
-  if (seeded) await page.reload();
+  if (seeded) await reloadToLast(page);
   await expect(page.getByText("已儲存於此裝置", { exact: true })).toBeVisible();
+}
+async function reloadToLast(page: Page) {
+  await page.reload();
+  await expect(page.locator(".save-status")).toContainText("已儲存於此裝置");
+  const resume = page.getByRole("button", { name: /繼續上次的白板/ });
+  if (await resume.isVisible()) await resume.click();
+  await expect(page.locator(".save-status")).toContainText("已儲存於此裝置");
 }
 async function clickTool(page: Page, name: string) {
   const category: Record<string, string> = {
@@ -73,7 +80,12 @@ async function readBoards(page: Page) {
     });
     return new Promise<any[]>((res, rej) => {
       const r = db.transaction("boards").objectStore("boards").getAll();
-      r.onsuccess = () => res(r.result);
+      r.onsuccess = () =>
+        res(
+          r.result.sort(
+            (a: any, b: any) => Number(!!a.guide) - Number(!!b.guide),
+          ),
+        );
       r.onerror = () => rej(r.error);
     });
   });
@@ -174,7 +186,7 @@ test("pinned calculator precision, invalid input, result nodes and persisted dim
   expect(c.width).toBeGreaterThan(280);
   expect(c.height).toBeGreaterThan(340);
   expect(c.expression).toBe("(1800+650)*2");
-  await page.reload();
+  await reloadToLast(page);
   await saved(page);
   await expect(page.locator(".canvas-item.calculator output")).toHaveText(
     "4900",
@@ -215,7 +227,7 @@ test("independent boards, rename duplicate search and JSON roundtrip", async ({
   ).toBeVisible();
   await expect(page.getByText("獨立白板資料", { exact: true })).toBeVisible();
   await saved(page);
-  await page.reload();
+  await reloadToLast(page);
   await saved(page);
   await expect(
     page.getByRole("heading", { name: "測試工作台（匯入）" }),
@@ -351,7 +363,7 @@ test("production PWA installs cache, reloads offline and saves calculator state"
   await expect(page.locator("output")).toHaveText("4400");
   await saved(page);
   await context.setOffline(true);
-  await page.reload();
+  await reloadToLast(page);
   await expect(page.locator("output")).toHaveText("4400");
   await input.fill("4400/2");
   await input.press("Enter");
@@ -360,7 +372,7 @@ test("production PWA installs cache, reloads offline and saves calculator state"
     page.getByText("離線 · 已儲存於此裝置", { exact: true }),
   ).toBeVisible();
   await context.setOffline(false);
-  await page.reload();
+  await reloadToLast(page);
   await saved(page);
   await expect(page.locator("output")).toHaveText("2200");
   const manifest = await page.request.get(
@@ -375,7 +387,9 @@ test("mobile viewport supports text editing and theme toggle", async ({
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await ready(page);
-  await page.getByRole("button", { name: "收合白板清單", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "展開白板清單", exact: true }),
+  ).toBeVisible();
   await clickTool(page, "新增自由文字");
   await edit(page, "手機基本編輯");
   await expect(page.getByText("手機基本編輯", { exact: true })).toBeVisible();
@@ -590,7 +604,7 @@ test("viewport restores independently and drawing connection uses boundary handl
     .getByRole("button", { name: /週末旅行 · 靈感工作台.*7 個想法/ })
     .click();
   await saved(page);
-  await page.reload();
+  await reloadToLast(page);
   await saved(page);
   const after = (await readBoards(page)).find((b) => b.name === before.name);
   expect(after.viewport).toEqual(before.viewport);
@@ -632,7 +646,7 @@ test("GitHub Pages subpath assets, service worker scope and offline reload", asy
   const manifest = await page.request.get(url + "manifest.webmanifest");
   expect(manifest.ok()).toBe(true);
   await context.setOffline(true);
-  await page.reload();
+  await reloadToLast(page);
   await expect(
     page.getByRole("heading", { name: "週末旅行 · 靈感工作台" }),
   ).toBeVisible();

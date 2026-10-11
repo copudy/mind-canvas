@@ -55,3 +55,11 @@
 - persistence.ts 封裝 persisted／persist 能力與失敗處理。使用者點擊時要求，拒絕不阻斷正常 IndexedDB 寫入。
 - SW skipWaiting + clientsClaim 接管新版快取；已開頁面顯示載入新版入口，先 flush 再檢查失敗／待儲存狀態，避免強制重載未保存文件。首次接管不提示更新。
 - 畫布視角事件檢查 boardId，避免已離開白板的視角事件寫入當前白板。
+
+## 最新 UX 與管理偏好（2026-10-11）
+
+workspacePrefs.ts 將工作區偏好獨立於 Board：version1、lastOpened、pinned、sections、membership。沿用 IndexedDB v1 的 meta store，以 workspace-v1 儲存字串JSON，無破壞性資料庫升級。normalizePrefs驗證參照、去重並從舊active遷移有效非指南ID；無可靠歷史時不猜測。釘選為ID捷徑，原區段不變。刪區段只清理membership。
+
+useWorkspace初始化保留既有文件、補唯一指南、刷新一次問候並開指南。管理設定採獨立序列寫入／失敗提示；初始化設定失敗仍呈現已讀取文件。update的contentChange旗標使視角寫入不修改updatedAt。指南開啟不修改lastOpened，工作白板開啟／新增／複製／匯入更新它；刪除時清除無效參照。
+
+Design Tokens集中定義UI14、輔助／工具13、點擊40。React Flow文件座標與縮放維持原系統，不使用CSS zoom。歡迎入口是指南專用介面，問候仍是該指南文字物件；探索只調整畫布視角與入口高度。新計算機430px高並置於可視中央，舊資料保持原尺寸與座標。

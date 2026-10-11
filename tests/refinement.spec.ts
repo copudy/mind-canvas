@@ -75,7 +75,7 @@ test("brand assets title tokens and unobstructed bottom library", async ({
   const buttons = await page.locator(".library-tools button").all();
   for (const b of buttons) {
     const r = await b.boundingBox();
-    expect(r!.width).toBe(76);
+    expect(r!.width).toBe(100);
     expect(r!.height).toBe(62);
   }
   await page.screenshot({ path: "artifacts/welcome.png" });
@@ -132,6 +132,8 @@ test("guide initializes once greetings confined stable and editable branching", 
   await expect(page.getByText(first, { exact: true })).toHaveCount(0);
   await page.reload();
   await saved(page);
+  await expect(page.locator("h1")).toHaveText("歡迎使用 Mind Canvas");
+  await page.getByRole("button", { name: /繼續上次的白板/ }).click();
   await expect(page.locator(".board-row.active")).toContainText("新的白板");
   await page.getByRole("button", { name: "開啟歡迎指南" }).click();
   await expect(item(page, "指南可互動")).toBeVisible();
@@ -156,7 +158,7 @@ test("guide initializes once greetings confined stable and editable branching", 
     (await boards(page)).find((b) => b.name === "新的白板").nodes,
   ).toHaveLength(0);
 });
-test("existing data untouched no unsolicited guide and guide creation idempotent", async ({
+test("existing data untouched automatic welcome guide and guide creation idempotent", async ({
   page,
 }) => {
   await page.goto(base);
@@ -179,7 +181,8 @@ test("existing data untouched no unsolicited guide and guide creation idempotent
   }, b);
   await page.reload();
   await saved(page);
-  expect(await boards(page)).toEqual([b]);
+  expect((await boards(page)).find((x) => x.boardId === b.boardId)).toEqual(b);
+  await expect(page.locator("h1")).toHaveText("歡迎使用 Mind Canvas");
   await page.getByRole("button", { name: "開啟歡迎指南" }).click();
   await saved(page);
   await page.getByRole("button", { name: "開啟歡迎指南" }).click();
@@ -238,6 +241,8 @@ test("independent browser profiles do not share boards and no outbound data requ
   await other.close();
   await page.reload();
   await saved(page);
+  await expect(page.locator("h1")).toHaveText("歡迎使用 Mind Canvas");
+  await page.getByRole("button", { name: /繼續上次的白板/ }).click();
   await expect(page.locator("output")).toHaveText("900");
   expect(outgoing).toEqual([]);
 });
@@ -263,6 +268,8 @@ test("close browser and reopen same profile restores active board calculator geo
   });
   p = await ctx.newPage();
   await ready(p);
+  await expect(p.locator("h1")).toHaveText("歡迎使用 Mind Canvas");
+  await p.getByRole("button", { name: /繼續上次的白板/ }).click();
   await expect(p.locator("output")).toHaveText("1125");
   expect((await boards(p)).find((b) => b.boardId === before.boardId)).toEqual(
     before,
@@ -303,7 +310,9 @@ test("mobile tool library scrolls does not collide minimap and dark guide readab
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await ready(page);
-  await page.getByRole("button", { name: "收合白板清單" }).click();
+  await expect(
+    page.getByRole("button", { name: "展開白板清單" }),
+  ).toBeVisible();
   await page.getByRole("tab", { name: "文字筆記", exact: true }).click();
   const lib = await page.locator(".tool-library").boundingBox(),
     mini = await page.locator(".react-flow__minimap").boundingBox();
@@ -349,7 +358,16 @@ test("JSON browser roundtrip preserves every guide object field and calculator w
   const data = await boards(page),
     imported = data.find((b) => b.name.endsWith("（匯入）"));
   expect(data).toHaveLength(2);
-  expect(data.find((b) => b.boardId === before.boardId)).toEqual(before);
+  const original = data.find((b) => b.boardId === before.boardId);
+  // Reload intentionally changes only the guide greeting; backup payload stays intact.
+  const reopenedGreeting = original.nodes.find(
+    (n: any) => n.id === before.guide.greetingId,
+  ).text;
+  expect(greetings).toContain(reopenedGreeting);
+  const expected = structuredClone(before);
+  expected.nodes.find((n: any) => n.id === before.guide.greetingId).text =
+    reopenedGreeting;
+  expect(original).toEqual(expected);
   expect(imported.boardId).not.toBe(before.boardId);
   expect(imported.nodes).toEqual(before.nodes);
   expect(imported.relations).toEqual(before.relations);

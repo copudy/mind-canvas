@@ -3,21 +3,59 @@ import { clone, makeBoard, id, type Board } from "./model";
 import { welcomeBoard, refreshGreeting } from "./guide";
 import { History } from "./history";
 import { repository, exportProject, importProject } from "./storage";
+import {
+  emptyPrefs,
+  normalizePrefs,
+  deleteSection,
+  type WorkspacePrefs,
+} from "./workspacePrefs";
 let initial:
-  Promise<{ boards: Board[]; active: string | undefined }> | undefined;
+  | Promise<{
+      boards: Board[];
+      prefs: WorkspacePrefs;
+      guideId: string;
+      prefsWarning: string;
+      unsaved: Board[];
+    }>
+  | undefined;
 async function initialize() {
   const boards = await repository.list();
-  if (!boards.length) {
+  const unsaved: Board[] = [];
+  let prefsWarning = "";
+  if (!boards.some((b) => b.guide)) {
     const b = welcomeBoard();
-    await repository.save(b);
     boards.push(b);
   }
   const active = await repository.active();
-  const selected = boards.find((b) => b.boardId === active) || boards[0];
-  refreshGreeting(selected);
-  return { boards, active };
+  let raw: unknown;
+  try {
+    raw = await repository.workspacePrefs();
+  } catch {
+    prefsWarning =
+      "白板管理設定讀取失敗；已保留白板內容，請重新設定釘選與區段。";
+  }
+  const prefs = normalizePrefs(raw, boards, active);
+  try {
+    await repository.workspacePrefs(prefs);
+  } catch {
+    prefsWarning =
+      "白板管理設定儲存失敗；本次釘選、區段與上次開啟紀錄可能無法保留。";
+  }
+  const guide = boards.find((b) => b.guide)!;
+  refreshGreeting(guide);
+  try {
+    await repository.save(guide);
+  } catch {
+    unsaved.push(guide);
+  }
+  return { boards, prefs, guideId: guide.boardId, prefsWarning, unsaved };
 }
 export function useWorkspace() {
+  const [prefs, setPrefs] = useState<WorkspacePrefs>(emptyPrefs);
+  const prefsRef = useRef<WorkspacePrefs>(emptyPrefs());
+  const prefsQueue = useRef(Promise.resolve());
+  const [prefsError, setPrefsError] = useState("");
+  const prefsPending = useRef(0);
   const [boards, setBoards] = useState<Board[]>([]),
     [board, setBoard] = useState<Board | null>(null),
     [status, setStatus] = useState("正在載入…"),
@@ -75,7 +113,7 @@ export function useWorkspace() {
       pending.current = null;
       persist(b);
     }
-    return queue.current;
+    return Promise.all([queue.current, prefsQueue.current]).then(() => {});
   };
   const schedule = (b: Board) => {
     // A completed older write must never announce a newer edit as saved.
@@ -89,12 +127,20 @@ export function useWorkspace() {
     let alive = true;
     initial ??= initialize();
     initial
-      .then(({ boards, active }) => {
+      .then(({ boards, prefs, guideId, prefsWarning, unsaved }) => {
         if (!alive) return;
         all.current = boards;
         setBoards(boards);
-        sync(boards.find((b) => b.boardId === active) || boards[0]);
-        setStatus("已儲存於此裝置");
+        prefsRef.current = prefs;
+        setPrefs(prefs);
+        setPrefsError(prefsWarning);
+        unsaved.forEach((b) => failed.current.set(b.boardId, b));
+        sync(boards.find((b) => b.boardId === guideId)!);
+        setStatus(unsaved.length ? "儲存失敗" : "已儲存於此裝置");
+        if (unsaved.length)
+          setError(
+            "指南儲存失敗。既有白板已保留，請匯出備份並檢查瀏覽器儲存空間。",
+          );
       })
       .catch((e) => {
         initial = undefined;
@@ -117,7 +163,13 @@ export function useWorkspace() {
         if (document.visibilityState === "hidden") void flush();
       },
       unload = (e: BeforeUnloadEvent) => {
-        if (pending.current || status === "儲存中…" || error) {
+        if (
+          pending.current ||
+          prefsPending.current ||
+          status === "儲存中…" ||
+          error ||
+          prefsError
+        ) {
           void flush();
           e.preventDefault();
           e.returnValue = "";
@@ -129,7 +181,33 @@ export function useWorkspace() {
       document.removeEventListener("visibilitychange", hide);
       window.removeEventListener("beforeunload", unload);
     };
-  }, [status, error]);
+  }, [status, error, prefsError]);
+  const changePrefs = (fn: (p: WorkspacePrefs) => void) => {
+    const next = clone(prefsRef.current);
+    fn(next);
+    prefsRef.current = next;
+    setPrefs(next);
+    prefsPending.current++;
+    prefsQueue.current = prefsQueue.current
+      .catch(() => {})
+      .then(async () => {
+        try {
+          await repository.workspacePrefs(next);
+          setPrefsError("");
+        } catch (e) {
+          setPrefsError(
+            `白板管理設定儲存失敗：${String(e)}。重新開啟後可能無法保留本次設定。`,
+          );
+        } finally {
+          prefsPending.current--;
+        }
+      });
+    return prefsQueue.current;
+  };
+  const remember = (bid: string) =>
+    changePrefs((p) => {
+      p.lastOpened = bid;
+    });
   const history = () => {
     const bid = current.current!.boardId;
     if (!histories.current.has(bid)) histories.current.set(bid, new History());
@@ -138,12 +216,16 @@ export function useWorkspace() {
   const checkpoint = () => {
     if (current.current) history().push(current.current);
   };
-  const update = (fn: (b: Board) => void, record = true) => {
+  const update = (
+    fn: (b: Board) => void,
+    record = true,
+    contentChange = true,
+  ) => {
     if (!current.current) return;
     if (record) checkpoint();
     const next = clone(current.current);
     fn(next);
-    next.updatedAt = Date.now();
+    if (contentChange) next.updatedAt = Date.now();
     sync(next);
     schedule(next);
   };
@@ -170,8 +252,8 @@ export function useWorkspace() {
     await flush();
     const b = all.current.find((b) => b.boardId === bid);
     if (b) {
-      sync(refreshGreeting(clone(b)));
-      repository.active(bid).catch((e) => setError(String(e)));
+      sync(clone(b));
+      if (!b.guide) await remember(bid);
     }
   };
   const add = async () => {
@@ -179,7 +261,7 @@ export function useWorkspace() {
     const b = makeBoard("新的白板");
     sync(b);
     await persist(b);
-    await repository.active(b.boardId);
+    await remember(b.boardId);
   };
   const rename = async (bid: string, name: string) => {
     if (!name.trim()) return;
@@ -201,7 +283,7 @@ export function useWorkspace() {
     b.updatedAt = Date.now();
     sync(b);
     await persist(b);
-    await repository.active(b.boardId);
+    await remember(b.boardId);
   };
   const remove = async (bid: string) => {
     await flush();
@@ -209,11 +291,16 @@ export function useWorkspace() {
       await repository.remove(bid);
       failed.current.delete(bid);
       all.current = all.current.filter((b) => b.boardId !== bid);
+      await changePrefs((p) => {
+        p.pinned = p.pinned.filter((x) => x !== bid);
+        delete p.membership[bid];
+        if (p.lastOpened === bid) delete p.lastOpened;
+      });
       histories.current.delete(bid);
       if (!all.current.length) await add();
       else if (current.current?.boardId === bid) {
         sync(all.current[0]);
-        await repository.active(all.current[0].boardId);
+        if (!all.current[0].guide) await remember(all.current[0].boardId);
       } else setBoards(all.current);
     } catch (e) {
       setError(`刪除失敗：${String(e)}`);
@@ -239,7 +326,7 @@ export function useWorkspace() {
       await repository.saveMany(imported);
       all.current.push(...imported);
       sync(imported[0]);
-      await repository.active(imported[0].boardId);
+      await remember(imported[0].boardId);
       if (failed.current.size) {
         setStatus("儲存失敗");
         setError(
@@ -254,6 +341,41 @@ export function useWorkspace() {
     }
   };
   return {
+    prefs,
+    lastBoard: boards.find((b) => b.boardId === prefs.lastOpened && !b.guide),
+    togglePin: (bid: string) =>
+      changePrefs((p) => {
+        if (!all.current.some((b) => b.boardId === bid && !b.guide)) return;
+        p.pinned = p.pinned.includes(bid)
+          ? p.pinned.filter((x) => x !== bid)
+          : [...p.pinned, bid];
+      }),
+    addSection: (name: string) =>
+      changePrefs((p) => {
+        if (name.trim())
+          p.sections.push({
+            id: id(),
+            name: name.trim().slice(0, 80),
+            collapsed: false,
+          });
+      }),
+    renameSection: (sid: string, name: string) =>
+      changePrefs((p) => {
+        const s = p.sections.find((s) => s.id === sid);
+        if (s && name.trim()) s.name = name.trim().slice(0, 80);
+      }),
+    removeSection: (sid: string) => changePrefs((p) => deleteSection(p, sid)),
+    collapseSection: (sid: string) =>
+      changePrefs((p) => {
+        const s = p.sections.find((s) => s.id === sid);
+        if (s) s.collapsed = !s.collapsed;
+      }),
+    moveBoard: (bid: string, sid: string) =>
+      changePrefs((p) => {
+        if (sid && p.sections.some((s) => s.id === sid))
+          p.membership[bid] = sid;
+        else delete p.membership[bid];
+      }),
     createGuide: async () => {
       const existing = all.current.find((b) => b.guide);
       if (existing) return open(existing.boardId);
@@ -261,7 +383,6 @@ export function useWorkspace() {
       const b = welcomeBoard();
       sync(b);
       await persist(b);
-      await repository.active(b.boardId);
     },
     resetGuide: () =>
       update((b) => {
@@ -277,7 +398,7 @@ export function useWorkspace() {
     board,
     boards,
     status,
-    error,
+    error: error || prefsError,
     setError,
     current,
     update,
@@ -293,7 +414,11 @@ export function useWorkspace() {
     restore,
     flush,
     safeToReload: () =>
-      !failed.current.size && !pending.current && status !== "儲存失敗",
+      !failed.current.size &&
+      !pending.current &&
+      !prefsPending.current &&
+      !prefsError &&
+      status !== "儲存失敗",
     canUndo: board
       ? (histories.current.get(board.boardId)?.past.length || 0) > 0
       : false,

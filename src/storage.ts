@@ -12,6 +12,12 @@ const db = () =>
     },
   });
 export const repository = {
+  async workspacePrefs(value?: unknown) {
+    const d = await db();
+    if (value !== undefined) await d.put("meta", JSON.stringify(value), "workspace-v1");
+    const raw = await d.get("meta", "workspace-v1");
+    return raw ? JSON.parse(raw) as unknown : undefined;
+  },
   async list() {
     return (await (await db()).getAll("boards")).sort(
       (a, b) => b.updatedAt - a.updatedAt,
