@@ -66,6 +66,9 @@ test("brand assets title tokens and unobstructed bottom library", async ({
   await expect(
     page.getByRole("button", { name: "平移工具", exact: true }),
   ).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "建立可編輯副本", exact: true })
+    .click();
   const library = await page.locator(".tool-library").boundingBox();
   const canvas = await page.locator(".canvas-surface").boundingBox();
   const minimap = await page.locator(".react-flow__minimap").boundingBox();
@@ -83,6 +86,7 @@ test("brand assets title tokens and unobstructed bottom library", async ({
   expect((await page.locator(".tool-library").boundingBox())!.height).toBe(36);
   await page.reload();
   await saved(page);
+  await page.getByRole("button", { name: /繼續上次的白板/ }).click();
   await expect(page.getByRole("button", { name: "展開工具庫" })).toBeVisible();
   await page.getByRole("button", { name: "展開工具庫" }).click();
   await page.getByRole("tab", { name: "文字筆記", exact: true }).click();
@@ -97,30 +101,33 @@ test("brand assets title tokens and unobstructed bottom library", async ({
     .getByRole("textbox", { name: "編輯節點文字" })
     .press("Control+Enter");
   await saved(page);
-  const heading = (await boards(page))[0].nodes.find(
-    (n: any) => n.text === "新的標題",
-  );
+  const heading = (await boards(page))
+    .find((b) => !b.guide)
+    .nodes.find((n: any) => n.text === "新的標題");
   expect(heading.fontSize).toBe(26);
   expect(heading.bold).toBe(true);
 });
-test("guide initializes once greetings confined stable and editable branching", async ({
+test("guide protected greeting stable and practice remains editable", async ({
   page,
 }) => {
   await ready(page);
-  let data = await boards(page);
-  expect(data).toHaveLength(1);
-  expect(data[0].name).toBe("歡迎使用 Mind Canvas");
-  expect(data[0].guide).toBeTruthy();
-  const greeting = () =>
-    page
+  const original = (await boards(page))[0];
+  expect(original.name).toBe("Mind Canvas 使用指南");
+  const first = await page
+    .locator(".node-text")
+    .filter({ hasText: new RegExp(greetings.join("|")) })
+    .innerText();
+  await enterGuide(page);
+  expect(
+    await page
       .locator(".node-text")
       .filter({ hasText: new RegExp(greetings.join("|")) })
-      .innerText();
-  const first = await greeting();
-  await enterGuide(page);
-  expect(await greeting()).toBe(first);
-  await page.getByRole("tab", { name: "文字筆記", exact: true }).click();
-  expect(await greeting()).toBe(first);
+      .innerText(),
+  ).toBe(first);
+  await page
+    .getByRole("button", { name: "建立可編輯副本", exact: true })
+    .click();
+  await saved(page);
   await locate(page, "旅行計畫");
   await item(page, "旅行計畫").click();
   await page.keyboard.press("Tab");
@@ -128,39 +135,18 @@ test("guide initializes once greetings confined stable and editable branching", 
   await editor.fill("指南可互動");
   await editor.press("Control+Enter");
   await saved(page);
-  await page.getByRole("button", { name: "新的白板 ＋", exact: true }).click();
-  await saved(page);
-  await expect(page.getByText(first, { exact: true })).toHaveCount(0);
+  await enterGuide(page);
+  expect(
+    (await boards(page))
+      .find((b) => b.guide)
+      .nodes.some((n: any) => n.text === "指南可互動"),
+  ).toBe(false);
   await page.reload();
   await saved(page);
-  await expect(page.locator("h1")).toHaveText("歡迎使用 Mind Canvas");
+  expect((await boards(page)).filter((b) => b.guide)).toHaveLength(1);
   await page.getByRole("button", { name: /繼續上次的白板/ }).click();
-  await expect(page.locator(".board-row.active")).toContainText("新的白板");
-  await enterGuide(page);
   await locate(page, "指南可互動");
   await expect(item(page, "指南可互動")).toBeVisible();
-  const second = await greeting();
-  expect(second).not.toBe(first);
-  await page.getByRole("tab", { name: "圖形圖表", exact: true }).click();
-  expect(await greeting()).toBe(second);
-  data = await boards(page);
-  expect(data.filter((b) => b.guide)).toHaveLength(1);
-  await dataAction(page, "重設指南");
-  await page.getByRole("button", { name: "取消", exact: true }).click();
-  await locate(page, "指南可互動");
-  await expect(item(page, "指南可互動")).toBeVisible();
-  await dataAction(page, "重設指南");
-  await page.getByRole("button", { name: "確認重設", exact: true }).click();
-  await saved(page);
-  await expect(item(page, "指南可互動")).toHaveCount(0);
-  await page.locator(".canvas-surface").focus();
-  await page.keyboard.press("Control+z");
-  await saved(page);
-  await locate(page, "指南可互動");
-  await expect(item(page, "指南可互動")).toBeVisible();
-  expect(
-    (await boards(page)).find((b) => b.name === "新的白板").nodes,
-  ).toHaveLength(0);
 });
 test("existing data untouched automatic welcome guide and guide creation idempotent", async ({
   page,
@@ -186,7 +172,7 @@ test("existing data untouched automatic welcome guide and guide creation idempot
   await page.reload();
   await saved(page);
   expect((await boards(page)).find((x) => x.boardId === b.boardId)).toEqual(b);
-  await expect(page.locator("h1")).toHaveText("歡迎使用 Mind Canvas");
+  await expect(page.locator("h1")).toHaveText("Mind Canvas 使用指南");
   await enterGuide(page);
   await saved(page);
   await enterGuide(page);
@@ -233,7 +219,7 @@ test("independent browser profiles do not share boards and no outbound data requ
   await ready(page);
   await page.getByRole("button", { name: "新的白板 ＋", exact: true }).click();
   await page.getByRole("tab", { name: "實用工具", exact: true }).click();
-  await page.getByRole("button", { name: "釘選計算機", exact: true }).click();
+  await page.getByRole("button", { name: "計算機", exact: true }).click();
   await page.getByRole("textbox", { name: "計算機算式" }).fill("888+12");
   await page.getByRole("textbox", { name: "計算機算式" }).press("Enter");
   await saved(page);
@@ -241,11 +227,11 @@ test("independent browser profiles do not share boards and no outbound data requ
   const otherPage = await other.newPage();
   await ready(otherPage);
   expect(await boards(otherPage)).toHaveLength(1);
-  expect((await boards(otherPage))[0].name).toBe("歡迎使用 Mind Canvas");
+  expect((await boards(otherPage))[0].name).toBe("Mind Canvas 使用指南");
   await other.close();
   await page.reload();
   await saved(page);
-  await expect(page.locator("h1")).toHaveText("歡迎使用 Mind Canvas");
+  await expect(page.locator("h1")).toHaveText("Mind Canvas 使用指南");
   await page.getByRole("button", { name: /繼續上次的白板/ }).click();
   await expect(page.locator("output")).toHaveText("900");
   expect(outgoing).toEqual([]);
@@ -260,7 +246,7 @@ test("close browser and reopen same profile restores active board calculator geo
   await ready(p);
   await p.getByRole("button", { name: "新的白板 ＋", exact: true }).click();
   await p.getByRole("tab", { name: "實用工具", exact: true }).click();
-  await p.getByRole("button", { name: "釘選計算機", exact: true }).click();
+  await p.getByRole("button", { name: "計算機", exact: true }).click();
   await p.getByRole("textbox", { name: "計算機算式" }).fill("(350+25)*3");
   await p.getByRole("textbox", { name: "計算機算式" }).press("Enter");
   await saved(p);
@@ -272,7 +258,7 @@ test("close browser and reopen same profile restores active board calculator geo
   });
   p = await ctx.newPage();
   await ready(p);
-  await expect(p.locator("h1")).toHaveText("歡迎使用 Mind Canvas");
+  await expect(p.locator("h1")).toHaveText("Mind Canvas 使用指南");
   await p.getByRole("button", { name: /繼續上次的白板/ }).click();
   await expect(p.locator("output")).toHaveText("1125");
   expect((await boards(p)).find((b) => b.boardId === before.boardId)).toEqual(
@@ -317,6 +303,9 @@ test("mobile tool library scrolls does not collide minimap and dark guide readab
   await expect(
     page.getByRole("button", { name: "展開白板清單" }),
   ).toBeVisible();
+  await page
+    .getByRole("button", { name: "建立可編輯副本", exact: true })
+    .click();
   await page.getByRole("tab", { name: "文字筆記", exact: true }).click();
   const lib = await page.locator(".tool-library").boundingBox(),
     mini = await page.locator(".react-flow__minimap").boundingBox();
@@ -346,12 +335,17 @@ test("JSON browser roundtrip preserves every guide object field and calculator w
   page,
 }) => {
   await ready(page);
+  await page
+    .getByRole("button", { name: "建立可編輯副本", exact: true })
+    .click();
   await locate(page, "旅行預算");
   const calc = page.getByRole("textbox", { name: "計算機算式" });
   await calc.fill("0.1+0.2");
   await calc.press("Enter");
   await saved(page);
-  const before = (await boards(page))[0];
+  const before = (await boards(page)).find(
+    (b) => !b.guide && b.name.endsWith("（複本）"),
+  );
   const download = page.waitForEvent("download");
   await dataAction(page, "匯出本白板");
   const path = await (await download).path();
@@ -362,17 +356,9 @@ test("JSON browser roundtrip preserves every guide object field and calculator w
   await saved(page);
   const data = await boards(page),
     imported = data.find((b) => b.name.endsWith("（匯入）"));
-  expect(data).toHaveLength(2);
+  expect(data).toHaveLength(3);
   const original = data.find((b) => b.boardId === before.boardId);
-  // Reload intentionally changes only the guide greeting; backup payload stays intact.
-  const reopenedGreeting = original.nodes.find(
-    (n: any) => n.id === before.guide.greetingId,
-  ).text;
-  expect(greetings).toContain(reopenedGreeting);
-  const expected = structuredClone(before);
-  expected.nodes.find((n: any) => n.id === before.guide.greetingId).text =
-    reopenedGreeting;
-  expect(original).toEqual(expected);
+  expect(original).toEqual(before);
   expect(imported.boardId).not.toBe(before.boardId);
   expect(imported.nodes).toEqual(before.nodes);
   expect(imported.relations).toEqual(before.relations);

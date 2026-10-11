@@ -1,5 +1,6 @@
 import { openDB, type DBSchema } from "idb";
 import { clone, id, type Board, type Item, type Relation } from "./model";
+import { validateTemplates, type CanvasTemplate } from "./templates";
 interface CanvasDB extends DBSchema {
   boards: { key: string; value: Board };
   meta: { key: string; value: string };
@@ -12,6 +13,17 @@ const db = () =>
     },
   });
 export const repository = {
+  async templates(value?: CanvasTemplate[]) {
+    const d = await db();
+    if (value !== undefined)
+      await d.put(
+        "meta",
+        JSON.stringify(validateTemplates(value)),
+        "templates-v1",
+      );
+    const raw = await d.get("meta", "templates-v1");
+    return raw ? validateTemplates(JSON.parse(raw)) : [];
+  },
   async workspacePrefs(value?: unknown) {
     const d = await db();
     if (value !== undefined)
@@ -41,11 +53,15 @@ export const repository = {
     if (stamp) await d.put("meta", String(stamp), "backup-at");
     return Number(await d.get("meta", "backup-at")) || 0;
   },
-  async saveMany(boards: Board[]) {
+  async saveMany(boards: Board[], templates?: CanvasTemplate[]) {
     const d = await db(),
       tx = d.transaction(["boards", "meta"], "readwrite"),
       stamp = Date.now();
     try {
+      if (templates !== undefined)
+        await tx
+          .objectStore("meta")
+          .put(JSON.stringify(templates), "templates-v1");
       for (const board of boards) {
         await tx.objectStore("boards").put(clone(board));
         await tx
@@ -142,7 +158,17 @@ export function validateBoard(raw: unknown): Board {
       typeof v.bold !== "boolean" ||
       !str(v.expression, 500) ||
       !str(v.result, 200) ||
-      !str(v.calcError, 500)
+      !str(v.calcError, 500) ||
+      (v.floating !== undefined &&
+        (v.kind !== "calculator" || typeof v.floating !== "boolean")) ||
+      (v.closed !== undefined &&
+        (v.kind !== "calculator" || typeof v.closed !== "boolean")) ||
+      (v.floatPosition !== undefined && !point(v.floatPosition)) ||
+      (v.treeStyle !== undefined &&
+        (!object(v.treeStyle) ||
+          !color(v.treeStyle.color) ||
+          !num(v.treeStyle.width, 1, 8) ||
+          typeof v.treeStyle.dashed !== "boolean"))
     )
       throw new Error("節點資料無效或 ID 重複");
     ids.add(v.id);
@@ -198,6 +224,7 @@ export function validateBoard(raw: unknown): Board {
     guide !== undefined &&
     (!object(guide) ||
       guide.version !== 1 ||
+      (guide.protected !== undefined && typeof guide.protected !== "boolean") ||
       !str(guide.greetingId, 100) ||
       !nodes.some((n) => n.id === guide.greetingId && n.kind === "text"))
   )
@@ -222,12 +249,30 @@ export function validateBoard(raw: unknown): Board {
     treeStyle: clone(raw.treeStyle) as Board["treeStyle"],
   };
 }
-export function exportProject(boards: Board[]): string {
+export function exportProject(
+  boards: Board[],
+  templates?: CanvasTemplate[],
+): string {
   return JSON.stringify(
-    { format: "freeform-mind-canvas", schemaVersion: 1, boards },
+    {
+      format: "freeform-mind-canvas",
+      schemaVersion: templates?.length ? 2 : 1,
+      boards,
+      ...(templates ? { templates } : {}),
+    },
     null,
     2,
   );
+}
+export function importBundle(text: string) {
+  const boards = importProject(text),
+    raw = JSON.parse(text);
+  const templates = validateTemplates(raw.templates ?? []).map((t) => ({
+    ...t,
+    id: id(),
+    name: `${t.name.slice(0, 70)}（匯入）`,
+  }));
+  return { boards, templates };
 }
 export function importProject(text: string): Board[] {
   if (text.length > 20_000_000) throw new Error("檔案超過 20 MB");
@@ -240,7 +285,7 @@ export function importProject(text: string): Board[] {
   if (
     !object(raw) ||
     raw.format !== "freeform-mind-canvas" ||
-    raw.schemaVersion !== 1 ||
+    (raw.schemaVersion !== 1 && raw.schemaVersion !== 2) ||
     !Array.isArray(raw.boards) ||
     !raw.boards.length ||
     raw.boards.length > 100

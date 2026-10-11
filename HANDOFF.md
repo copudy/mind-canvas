@@ -1,5 +1,13 @@
 # Mind Canvas 安全交接
 
+## v1.1.0 本機開發／待驗收（最新）
+
+2026-10-11：本次僅授權本機開發與測試。分支develop/v1.1.0，版本1.1.0-dev.0；沒有Push／新增Tag／正式部署。必須收到「Demo OK，可以部署 v1.1.0」才發布。下方v1.0首次發布授權已完成，不得延伸到新版。
+
+已實作受保護使用指南／練習副本、單一計算機入口、六官方範本與我的範本、完整備份版本2／舊版1相容、側欄覆蓋模式与情境避障。完整設計、資料遷移、測試／限制／驗收見V11_REPORT.md及TEST_REPORT最新段落。原v1.0 Tag40f576f與main594f7d2保留不動。
+
+接手先讀上述報告與git status／log，勿重建或清除IndexedDB。模板放在原DB的meta/templates-v1；舊指南修改會保留為一般白板。含範本備份要用v1.1還原，v1.0拒絕格式2。4173本機預覽可用START_PREVIEW.cmd重啟。完成本機驗收後停止，不自動部署。
+
 ## v1.0.0 首次發布已完成（2026-10-11）
 
 使用者已驗收並授權本次GitHub推送與Pages首次部署，另明確確認公開Repository。已建立copudy/mind-canvas，帳號copudy具admin／push權限，repo／workflow認證有效，Actions開啟，Pages來源workflow。下方安全收尾段落為歷史；現行授權以本段為準。

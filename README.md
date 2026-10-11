@@ -1,5 +1,7 @@
 # PD-1 Center | Mind Canvas
 
+目前工作分支為v1.1本機Demo（1.1.0-dev.0），**未推送或部署**；操作及验收見[V11_REPORT.md](V11_REPORT.md)。指南在Header「說明與幫助」，官方原稿只讀，練習請建立副本。計算機只有一個入口，可在工具內釘選／解除。思考框架包含官方範本與我的範本；全部備份保存自訂範本，含範本的格式2需用新版還原。
+
 正式 v1.0.0：[開啟 Mind Canvas](https://copudy.github.io/mind-canvas/) · [GitHub](https://github.com/copudy/mind-canvas)。首次部署與正式測試見 DEPLOYMENT.md，後續版本流程見 RELEASE_SOP.md。本機與正式網址的資料獨立，請透過 JSON 搬移。
 
 離線優先的個人思考工作台。自由放置多棵心智圖、文字、便條、圖形與可實際運算的計算機。資料保存於此瀏覽器的 IndexedDB，沒有會員、雲端或後端。

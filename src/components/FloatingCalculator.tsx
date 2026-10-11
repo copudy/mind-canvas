@@ -10,19 +10,25 @@ export default function FloatingCalculator({
   onInsert,
 }: {
   item: Item;
-  onChange: (item: Item) => void;
+  onChange: (item: Item, record?: boolean) => void;
   onPin: () => void;
   onClose: () => void;
   onInsert: () => void;
 }) {
-  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [position, setPosition] = useState(
+    item.floatPosition || { x: 0, y: 0 },
+  );
   const drag = useRef<{ x: number; y: number; px: number; py: number } | null>(
     null,
   );
   return (
     <div
       className="floating-calculator"
-      style={{ transform: `translate(${position.x}px,${position.y}px)` }}
+      style={{
+        transform: `translate(${position.x}px,${position.y}px)`,
+        width: item.width,
+        height: item.height,
+      }}
     >
       <div
         className="floating-title"
@@ -44,8 +50,14 @@ export default function FloatingCalculator({
               y: d.py + e.clientY - d.y,
             });
         }}
-        onPointerUp={() => (drag.current = null)}
-        onPointerCancel={() => (drag.current = null)}
+        onPointerUp={() => {
+          drag.current = null;
+          onChange({ ...item, floatPosition: position });
+        }}
+        onPointerCancel={() => {
+          drag.current = null;
+          onChange({ ...item, floatPosition: position });
+        }}
       >
         <span>⠿ 浮動計算機</span>
         <button aria-label="釘選浮動計算機" title="釘選到畫布" onClick={onPin}>
@@ -57,7 +69,7 @@ export default function FloatingCalculator({
       </div>
       <Calculator
         item={item}
-        onChange={(p) => onChange({ ...item, ...p })}
+        onChange={(p, r) => onChange({ ...item, ...p }, r)}
         onInsert={onInsert}
       />
     </div>

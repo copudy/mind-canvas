@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { clone, makeBoard, id, type Board } from "./model";
 import { welcomeBoard, refreshGreeting, arrangeGuide } from "./guide";
 import { History } from "./history";
-import { repository, exportProject, importProject } from "./storage";
+import { repository, exportProject, importBundle } from "./storage";
+import type { CanvasTemplate } from "./templates";
 import {
   emptyPrefs,
   normalizePrefs,
@@ -42,6 +43,23 @@ async function initialize() {
       "白板管理設定儲存失敗；本次釘選、區段與上次開啟紀錄可能無法保留。";
   }
   const guide = boards.find((b) => b.guide)!;
+  if (!guide.guide?.protected) {
+    const legacy = clone(guide);
+    legacy.boardId = id();
+    delete legacy.guide;
+    legacy.name = "使用指南（舊版練習保留）";
+    const fresh = welcomeBoard();
+    fresh.boardId = guide.boardId;
+    // Archive old editable content and upgrade the official document atomically.
+    try {
+      await repository.saveMany([legacy, fresh]);
+      boards.push(legacy);
+      Object.assign(guide, fresh);
+    } catch {
+      unsaved.push(guide);
+      prefsWarning = "指南升級未完成；舊指南內容已保留，請先備份。";
+    }
+  }
   arrangeGuide(guide);
   refreshGreeting(guide);
   try {
@@ -52,6 +70,54 @@ async function initialize() {
   return { boards, prefs, guideId: guide.boardId, prefsWarning, unsaved };
 }
 export function useWorkspace() {
+  const [templates, setTemplates] = useState<CanvasTemplate[]>([]);
+  const templatesRef = useRef<CanvasTemplate[]>([]);
+  const templatesReadFailed = useRef(false);
+  const templatesReady = useRef(false);
+  useEffect(() => {
+    void repository
+      .templates()
+      .then((t) => {
+        templatesReady.current = true;
+        templatesRef.current = t;
+        setTemplates(t);
+      })
+      .catch(() => {
+        templatesReady.current = true;
+        templatesReadFailed.current = true;
+        setError(
+          "我的範本讀取失敗；為保護原資料，已停用範本修改與全部備份。請保留現有備份。",
+        );
+      });
+  }, []);
+  const saveTemplates = async (
+    change: (current: CanvasTemplate[]) => CanvasTemplate[],
+  ) => {
+    if (!templatesReady.current) throw new Error("正在載入範本，請稍後再試");
+    if (templatesReadFailed.current)
+      throw new Error("範本讀取失敗，不能覆寫原資料");
+    prefsPending.current++;
+    const job = prefsQueue.current
+      .catch(() => {})
+      .then(async () => {
+        const next = change(templatesRef.current);
+        await repository.templates(next);
+        templatesRef.current = next;
+        setTemplates(next);
+      });
+    prefsQueue.current = job.then(
+      () => {},
+      () => {},
+    );
+    try {
+      await job;
+    } catch (e) {
+      setError(`範本儲存失敗：${String(e)}。請勿關閉本頁。`);
+      throw e;
+    } finally {
+      prefsPending.current--;
+    }
+  };
   const [prefs, setPrefs] = useState<WorkspacePrefs>(emptyPrefs);
   const prefsRef = useRef<WorkspacePrefs>(emptyPrefs());
   const prefsQueue = useRef(Promise.resolve());
@@ -232,7 +298,8 @@ export function useWorkspace() {
     return histories.current.get(bid)!;
   };
   const checkpoint = () => {
-    if (current.current) history().push(current.current);
+    if (current.current && !current.current.guide)
+      history().push(current.current);
   };
   const update = (
     fn: (b: Board) => void,
@@ -240,6 +307,7 @@ export function useWorkspace() {
     contentChange = true,
   ) => {
     if (!current.current) return;
+    if (current.current.guide && contentChange) return;
     const next = clone(current.current);
     fn(next);
     if (JSON.stringify(next) === JSON.stringify(current.current)) return;
@@ -249,7 +317,7 @@ export function useWorkspace() {
     schedule(next, contentChange);
   };
   const undo = () => {
-    if (!current.current) return;
+    if (!current.current || current.current.guide) return;
     const b = history().undo(current.current);
     if (b) {
       b.updatedAt = Date.now();
@@ -258,9 +326,10 @@ export function useWorkspace() {
     }
   };
   const redo = () => {
-    if (!current.current) return;
+    if (!current.current || current.current.guide) return;
     const b = history().redo(current.current);
     if (b) {
+      if (b.guide) refreshGreeting(b);
       b.updatedAt = Date.now();
       sync(b);
       schedule(b);
@@ -284,6 +353,7 @@ export function useWorkspace() {
     await remember(b.boardId);
   };
   const rename = async (bid: string, name: string) => {
+    if (all.current.find((b) => b.boardId === bid)?.guide) return;
     if (!name.trim()) return;
     await flush();
     const b = clone(all.current.find((b) => b.boardId === bid)!);
@@ -306,6 +376,7 @@ export function useWorkspace() {
     await remember(b.boardId);
   };
   const remove = async (bid: string) => {
+    if (all.current.find((b) => b.boardId === bid)?.guide) return;
     await flush();
     try {
       await repository.remove(bid);
@@ -327,8 +398,21 @@ export function useWorkspace() {
     }
   };
   const backup = async (whole = false) => {
+    if (whole && !templatesReady.current) {
+      setError("正在載入範本，請稍後再製作完整備份。");
+      return;
+    }
+    if (whole && templatesReadFailed.current) {
+      setError(
+        "範本讀取失敗，無法製作完整備份；請先匯出個別白板，保留原範本資料。",
+      );
+      return;
+    }
     await flush();
-    const text = exportProject(whole ? all.current : [current.current!]);
+    const text = exportProject(
+      whole ? all.current : [current.current!],
+      whole ? templatesRef.current : undefined,
+    );
     const url = URL.createObjectURL(
       new Blob([text], { type: "application/json" }),
     );
@@ -347,10 +431,20 @@ export function useWorkspace() {
   };
   const restore = async (file: File) => {
     try {
+      if (!templatesReady.current)
+        throw new Error("正在載入範本，請稍後再匯入");
+      if (templatesReadFailed.current)
+        throw new Error("原範本讀取失敗，已停止匯入以避免覆寫");
       if (file.size > 20_000_000) throw new Error("檔案超過 20 MB");
-      const imported = importProject(await file.text());
+      const bundle = importBundle(await file.text()),
+        imported = bundle.boards;
       await flush();
-      const stamp = await repository.saveMany(imported);
+      const mergedTemplates = [...templatesRef.current, ...bundle.templates];
+      if (mergedTemplates.length > 100)
+        throw new Error("範本超過100個；未匯入任何資料");
+      const stamp = await repository.saveMany(imported, mergedTemplates);
+      templatesRef.current = mergedTemplates;
+      setTemplates(mergedTemplates);
       all.current.push(...imported);
       sync(imported[0]);
       setLastSaved(stamp);
@@ -369,6 +463,17 @@ export function useWorkspace() {
     }
   };
   return {
+    templates,
+    saveTemplate: (t: CanvasTemplate) =>
+      saveTemplates((current) => [...current, t]),
+    renameTemplate: (tid: string, name: string) =>
+      saveTemplates((current) =>
+        current.map((t) =>
+          t.id === tid ? { ...t, name: name.trim().slice(0, 80) } : t,
+        ),
+      ),
+    removeTemplate: (tid: string) =>
+      saveTemplates((current) => current.filter((t) => t.id !== tid)),
     lastSaved,
     lastBackup,
     beginGesture: () => {

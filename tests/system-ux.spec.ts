@@ -10,9 +10,7 @@ for (const size of [
     await page.setViewportSize(size);
     await page.goto("/");
     await waitSaved(page);
-    await expect(
-      page.getByRole("button", { name: "展開工具庫" }),
-    ).toBeVisible();
+    await expect(page.locator(".guide-learning-bar")).toBeVisible();
     await expect
       .poll(() => page.locator(".react-flow__viewport").getAttribute("style"))
       .toContain("translate(16px");
@@ -20,7 +18,9 @@ for (const size of [
       name: "建立新白板",
       exact: true,
     });
-    const lib = await page.locator(".tool-library").boundingBox();
+    const lib = await page
+      .locator(".tool-library,.guide-learning-bar")
+      .boundingBox();
     const box = await create.boundingBox();
     expect(box!.y + box!.height).toBeLessThan(lib!.y);
     await create.click();
@@ -37,7 +37,8 @@ for (const size of [
     });
     const resumedBox = await resume.boundingBox();
     expect(resumedBox!.y + resumedBox!.height).toBeLessThan(
-      (await page.locator(".tool-library").boundingBox())!.y,
+      (await page.locator(".tool-library,.guide-learning-bar").boundingBox())!
+        .y,
     );
     await page.screenshot({ path: `artifacts/short-${size.width}.png` });
     await resume.click();
@@ -69,11 +70,11 @@ for (const width of [1440, 390, 320])
       .poll(async () =>
         page.locator(".react-flow__viewport").getAttribute("style"),
       )
-      .toContain("translate(16px");
+      .toContain(width === 1440 ? "translate(308px" : "translate(16px");
     await waitSaved(page);
     const geometry = await page.evaluate(() => {
       const lib = document
-          .querySelector(".tool-library")!
+          .querySelector(".tool-library,.guide-learning-bar")!
           .getBoundingClientRect(),
         head = document.querySelector("header")!.getBoundingClientRect(),
         brand = document

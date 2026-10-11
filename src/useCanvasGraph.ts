@@ -13,7 +13,8 @@ export function useCanvasGraph(
     () => (board ? hiddenIds(board) : new Set<string>()),
     [board],
   );
-  const visible = board?.nodes.filter((n) => !hidden.has(n.id)) || [];
+  const visible =
+    board?.nodes.filter((n) => !hidden.has(n.id) && !n.floating) || [];
   const nodes: FlowNode[] = visible.map((n) => ({
     id: n.id,
     type: "canvas",
@@ -30,11 +31,20 @@ export function useCanvasGraph(
           ? `掛載 · 第 ${mount.index + 1} 個子節點`
           : undefined,
     },
-    draggable: true,
+    draggable: !board?.guide,
+    selectable: !board?.guide,
+    connectable: !board?.guide,
   }));
   // Text/calculator edits and selection do not invalidate geometry routes.
   const geometry = JSON.stringify([
-    visible.map((n) => [n.id, n.position, n.width, n.height, n.parentId]),
+    visible.map((n) => [
+      n.id,
+      n.position,
+      n.width,
+      n.height,
+      n.parentId,
+      n.treeStyle,
+    ]),
     board?.relations,
     board?.treeStyle,
   ]);
@@ -49,7 +59,11 @@ export function useCanvasGraph(
           id: `tree:${n.id}`,
           source: n.parentId!,
           target: n.id,
-          ...board.treeStyle,
+          ...(() => {
+            let p = n;
+            while (p.parentId && map.has(p.parentId)) p = map.get(p.parentId)!;
+            return p.treeStyle || board.treeStyle;
+          })(),
           tree: true,
           sourceSide: undefined,
           targetSide: undefined,

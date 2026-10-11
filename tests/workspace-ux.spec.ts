@@ -27,7 +27,7 @@ async function refresh(p: Page) {
   await saved(p);
   await p.reload();
   await saved(p);
-  await expect(p.locator("h1")).toHaveText("歡迎使用 Mind Canvas");
+  await expect(p.locator("h1")).toHaveText("Mind Canvas 使用指南");
 }
 async function rename(p: Page, old: string, name: string) {
   await p.getByRole("button", { name: `管理 ${old}`, exact: true }).click();
@@ -58,7 +58,7 @@ test("welcome startup refresh internal switching and last-opened independent of 
   await expect(
     page.getByRole("button", { name: "探索使用指南", exact: true }),
   ).toHaveCount(0);
-  await expect(page.locator("h1")).toHaveText("歡迎使用 Mind Canvas");
+  await expect(page.locator("h1")).toHaveText("Mind Canvas 使用指南");
 
   await page.getByRole("button", { name: "建立新白板", exact: true }).click();
   await rename(page, "新的白板", "A 最近編輯");
@@ -185,6 +185,7 @@ for (const width of [1440, 390, 320])
     await expect(
       page.getByRole("button", { name: "探索使用指南", exact: true }),
     ).toHaveCount(0);
+    await page.getByRole("button", { name: "建立新白板", exact: true }).click();
     const sizes = await page.evaluate(() => ({
       overflow: document.documentElement.scrollWidth > innerWidth,
       body: getComputedStyle(document.body).fontSize,

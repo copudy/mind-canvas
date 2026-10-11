@@ -15,7 +15,7 @@ export function refreshGreeting(b: Board): Board {
   return b;
 }
 export function welcomeBoard(): Board {
-  const b = makeBoard("歡迎使用 Mind Canvas");
+  const b = makeBoard("Mind Canvas 使用指南");
   b.viewport = { x: 70, y: 60, zoom: 0.55 };
   b.treeStyle.color = "#3b82f6";
   const put = (
@@ -145,11 +145,49 @@ export function welcomeBoard(): Board {
     580,
     130,
   ).color = "#293b35";
-  b.guide = { version: 1, greetingId: greeting.id };
+  b.guide = { version: 1, greetingId: greeting.id, protected: true };
   // Keep the lower teaching areas clear of the larger, readable calculator.
   for (const n of b.nodes) if (n.position.y >= 645) n.position.y += 100;
   arrangeGuide(b);
+  sequenceGuide(b);
   return refreshGreeting(b);
+}
+
+function sequenceGuide(b: Board) {
+  const entry = b.nodes.find((n) => n.id === b.guide?.entryId);
+  if (entry) entry.height = 250;
+  const positions: Record<string, [number, number]> = {
+    "01 先動手玩一下": [0, 660],
+    "02 讓想法長出分支": [0, 1060],
+    旅行計畫: [0, 1150],
+    想去的地方: [230, 1120],
+    預算與準備: [230, 1270],
+    "03 把數字也放進思考": [0, 1680],
+    旅行預算: [0, 1760],
+    "04 自由串起一個流程": [0, 2290],
+    蒐集靈感: [0, 2370],
+    安排下一步: [250, 2370],
+    動手完成: [500, 2370],
+    "05 保存，並留下備份": [0, 2640],
+    "06 從生活中的小問題開始": [0, 3220],
+  };
+  for (const n of b.nodes) {
+    if (n.text.startsWith("PD-1 Center 的")) n.position.y = 480;
+    const p = positions[n.text];
+    if (p) n.position = { x: p[0], y: p[1] };
+    if (n.text.startsWith("試著拖動我")) {
+      n.position = { x: 0, y: 740 };
+      n.text =
+        "在練習副本中試著拖動我！\n雙擊文字就能修改。\n選取後拖曳邊角，調整大小。";
+    }
+    if (n.text.startsWith("空白處拖曳")) n.position = { x: 460, y: 740 };
+    if (n.text.startsWith("選取「旅行計畫」")) n.position = { x: 0, y: 1400 };
+    if (n.text.startsWith("流程是可編輯")) n.position = { x: 0, y: 2470 };
+    if (n.text.startsWith("白板會自動")) n.position = { x: 0, y: 2720 };
+    if (n.text.startsWith("資料保存在目前")) n.position = { x: 510, y: 2720 };
+    if (n.text.startsWith("旅行：地點分支")) n.position = { x: 0, y: 3300 };
+    if (n.id === b.guide?.backupId) n.position = { x: 0, y: 3040 };
+  }
 }
 
 /** Non-destructive one-time guide presentation upgrade: retain content and stable IDs. */

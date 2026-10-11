@@ -1,6 +1,6 @@
 {
   "name": "freeform-mind-canvas",
-  "version": "1.0.0",
+  "version": "1.1.0-dev.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview --host 127.0.0.1",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "lint": "tsc -b && prettier --check src/**/*.{ts,tsx,css} tests/**/*.ts *.ts index.html"
   },
   "dependencies": {
     "@xyflow/react": "^12.11.1",

@@ -39,7 +39,6 @@ export default function Sidebar(p: Props) {
   const [sectionEdit, setSectionEdit] = useState<string | null>(null),
     [sectionName, setSectionName] = useState("");
   const [deleteSection, setDeleteSection] = useState<string | null>(null);
-  const guide = p.boards.find((b) => b.guide);
   const matches = p.boards
     .filter(
       (b) => !b.guide && b.name.toLowerCase().includes(search.toLowerCase()),
@@ -190,21 +189,11 @@ export default function Sidebar(p: Props) {
     </section>
   );
   return (
-    <aside className="sidebar">
+    <aside className="sidebar" id="board-sidebar">
       <button className="new-board" onClick={p.onAdd}>
         <Plus size={22} />
         新的白板<span>＋</span>
       </button>
-      {guide && (
-        <button
-          className={`guide-entry ${p.active === guide.boardId ? "active" : ""}`}
-          disabled={p.active === guide.boardId}
-          onClick={() => p.onOpen(guide.boardId)}
-        >
-          <BookOpen size={22} />
-          歡迎使用 Mind Canvas
-        </button>
-      )}
       <label className="board-search">
         <Search size={20} />
         <input

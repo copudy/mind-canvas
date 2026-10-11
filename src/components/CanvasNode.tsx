@@ -24,6 +24,8 @@ import {
 import { calculate } from "../calculator";
 import type { Item, Point } from "../model";
 export interface CanvasActions {
+  readOnly: boolean;
+  practice: () => void;
   editId: string | null;
   setEdit: (id: string | null) => void;
   patch: (id: string, patch: Partial<Item>, record?: boolean) => void;
@@ -234,7 +236,7 @@ export default function CanvasNode({
       style={style}
     >
       <NodeResizer
-        isVisible={selected && !editing}
+        isVisible={selected && !editing && !actions.readOnly}
         minWidth={item.kind === "calculator" ? 260 : 80}
         minHeight={item.kind === "calculator" ? 335 : 40}
         maxWidth={3000}
@@ -270,6 +272,7 @@ export default function CanvasNode({
           id={side}
           position={pos}
           className="node-port"
+          isConnectable={!actions.readOnly}
         />
       ))}
       {item.kind === "calculator" ? (
@@ -277,17 +280,22 @@ export default function CanvasNode({
           <div className="calc-drag">
             ⠿ <span>預算計算機</span>
           </div>
-          <Calculator
-            item={item}
-            onChange={(p, r) => actions.patch(id, p, r)}
-            onInsert={() =>
-              actions.insertResult(item.result, {
-                x: item.position.x + item.width + 65,
-                y: item.position.y,
-              })
-            }
-            onUnpin={() => actions.unpin(id)}
-          />
+          <fieldset
+            disabled={actions.readOnly}
+            style={{ border: 0, padding: 0, margin: 0 }}
+          >
+            <Calculator
+              item={item}
+              onChange={(p, r) => actions.patch(id, p, r)}
+              onInsert={() =>
+                actions.insertResult(item.result, {
+                  x: item.position.x + item.width + 65,
+                  y: item.position.y,
+                })
+              }
+              onUnpin={() => actions.unpin(id)}
+            />
+          </fieldset>
         </>
       ) : editing ? (
         <textarea
@@ -311,7 +319,10 @@ export default function CanvasNode({
           }}
         />
       ) : (
-        <div className="node-text" onDoubleClick={() => actions.setEdit(id)}>
+        <div
+          className="node-text"
+          onDoubleClick={() => !actions.readOnly && actions.setEdit(id)}
+        >
           {item.text}
         </div>
       )}
@@ -321,6 +332,7 @@ export default function CanvasNode({
           title={item.collapsed ? "展開分支" : "收合分支"}
           aria-label={item.collapsed ? "展開分支" : "收合分支"}
           onClick={() => actions.toggle(id)}
+          disabled={actions.readOnly}
         >
           {item.collapsed ? (
             <ChevronRight size={13} />

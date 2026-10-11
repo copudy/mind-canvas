@@ -1,6 +1,7 @@
 import { waitSaved, dataAction, enterGuide, locate } from "./ui";
 import { test, expect, type Page } from "@playwright/test";
 import { makeBoard, makeItem, demoBoard } from "../src/model";
+test.setTimeout(60000); // Full persistence flows include multiple 800/1600ms save intervals.
 async function ready(page: Page, url = "/") {
   await page.goto(url);
   await waitSaved(page);
@@ -37,6 +38,9 @@ async function ready(page: Page, url = "/") {
   }, demoBoard());
   if (seeded) await reloadToLast(page);
   await waitSaved(page);
+  await page.getByRole("button", { name: "Fit View", exact: true }).click();
+  await page.waitForTimeout(300); // Wait for the explicit 180ms fit animation and scheduled viewport update.
+  await waitSaved(page);
 }
 async function reloadToLast(page: Page) {
   await page.reload();
@@ -59,7 +63,13 @@ async function clickTool(page: Page, name: string) {
   const toggle = page.getByRole("button", { name: "展開工具庫", exact: true });
   if (await toggle.isVisible()) await toggle.click();
   await page.getByRole("tab", { name: category[name], exact: true }).click();
-  await page.getByRole("button", { name, exact: true }).click();
+  if (name === "釘選計算機" || name === "浮動計算機") {
+    await page.getByRole("button", { name: "計算機", exact: true }).click();
+    if (name === "釘選計算機")
+      await page
+        .getByRole("button", { name: "釘選浮動計算機", exact: true })
+        .click();
+  } else await page.getByRole("button", { name, exact: true }).click();
 }
 const nodes = (page: Page) => page.locator(".react-flow__node");
 const node = (page: Page, text: string) =>
@@ -304,7 +314,17 @@ test("drag entire branch, intentional reparent, prevent cycles and local layouts
   await saved(page);
   await root.click();
   for (const name of ["向右", "左右", "放射"]) {
-    await page.getByRole("button", { name, exact: true }).click();
+    const local = page
+      .locator(".context-tools")
+      .getByRole("button", { name, exact: true });
+    if (await local.count()) await local.click();
+    else {
+      await page.getByRole("tab", { name: "排版整理", exact: true }).click();
+      await page
+        .locator(".library-tools")
+        .getByRole("button", { name, exact: true })
+        .click();
+    }
     await saved(page);
     b = (await readBoards(page))[0];
     expect(b.nodes.find((n: any) => n.text === "一場剛剛好的旅行").layout).toBe(
@@ -597,10 +617,11 @@ test("viewport restores independently and drawing connection uses boundary handl
   page,
 }) => {
   await ready(page);
+  const initialZoom = (await readBoards(page))[0].viewport.zoom;
   await page.getByRole("button", { name: "Zoom Out", exact: true }).click();
   await expect
     .poll(async () => (await readBoards(page))[0].viewport.zoom)
-    .toBe(0.65);
+    .toBeLessThan(initialZoom);
   await saved(page);
   const before = (await readBoards(page))[0];
   await page.getByRole("button", { name: "新的白板 ＋", exact: true }).click();

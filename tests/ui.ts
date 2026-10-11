@@ -18,10 +18,9 @@ export async function dataAction(p: Page, name: string) {
 }
 export async function enterGuide(p: Page) {
   if (await p.locator(".guide-document").count()) return;
-  const show = p.getByRole("button", { name: "展開白板清單", exact: true });
-  if (await show.isVisible()) await show.click();
+  await p.getByRole("button", { name: "說明與幫助", exact: true }).click();
   await p
-    .getByRole("button", { name: "歡迎使用 Mind Canvas", exact: true })
+    .getByRole("menuitem", { name: "Mind Canvas 使用指南", exact: true })
     .click();
 }
 export async function locate(p: Page, text: string) {

@@ -9,7 +9,13 @@ import {
   AlignCenter,
   AlignRight,
 } from "lucide-react";
-import type { Board, Item, Relation, Side } from "../model";
+import {
+  rootId,
+  type Board,
+  type Item,
+  type Relation,
+  type Side,
+} from "../model";
 const colors = [
   "#ffffff",
   "#e0eee7",
@@ -50,6 +56,11 @@ export default function Inspector({
   onTreeStyle: (patch: Partial<Board["treeStyle"]>) => void;
 }) {
   const item = items[0];
+  const treeStyle =
+    item?.kind === "mind"
+      ? board.nodes.find((n) => n.id === rootId(board, item.id))?.treeStyle ||
+        board.treeStyle
+      : board.treeStyle;
   return (
     <aside className="inspector">
       <div className="inspector-heading">
@@ -235,7 +246,7 @@ export default function Inspector({
                   <input
                     aria-label="父子線顏色"
                     type="color"
-                    value={board.treeStyle.color}
+                    value={treeStyle.color}
                     onChange={(e) => onTreeStyle({ color: e.target.value })}
                   />
                 </label>
@@ -246,7 +257,7 @@ export default function Inspector({
                     type="range"
                     min="1"
                     max="8"
-                    value={board.treeStyle.width}
+                    value={treeStyle.width}
                     onChange={(e) => onTreeStyle({ width: +e.target.value })}
                   />
                 </label>
@@ -255,7 +266,7 @@ export default function Inspector({
                   <input
                     aria-label="父子線虛線"
                     type="checkbox"
-                    checked={board.treeStyle.dashed}
+                    checked={treeStyle.dashed}
                     onChange={(e) => onTreeStyle({ dashed: e.target.checked })}
                   />
                 </label>

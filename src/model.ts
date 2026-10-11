@@ -8,6 +8,10 @@ export interface Point {
   y: number;
 }
 export interface Item {
+  treeStyle?: { color: string; width: number; dashed: boolean };
+  floating?: boolean;
+  closed?: boolean;
+  floatPosition?: Point;
   id: string;
   kind: Kind;
   text: string;
@@ -43,6 +47,7 @@ export interface Relation {
 }
 export interface Board {
   guide?: {
+    protected?: boolean;
     version: 1;
     greetingId: string;
     entryId?: string;

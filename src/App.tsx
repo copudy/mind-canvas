@@ -6,6 +6,7 @@ import {
   BackgroundVariant,
   MiniMap,
   Controls,
+  ControlButton,
   ConnectionMode,
   ConnectionLineType,
   SelectionMode,
@@ -27,10 +28,14 @@ import {
   Sun,
   Moon,
   PanelLeftOpen,
+  PanelLeftClose,
+  CircleHelp,
+  BookOpen,
   Search,
   X,
   Plus,
   LocateFixed,
+  Maximize2,
   Settings2,
 } from "lucide-react";
 import CanvasNode, {
@@ -49,6 +54,12 @@ import {
 import Inspector from "./components/Inspector";
 import ToolLibrary from "./components/ToolLibrary";
 import DataSettings from "./components/DataSettings";
+import TemplateDialog from "./components/TemplateDialog";
+import {
+  captureTemplate,
+  instantiateTemplate,
+  type CanvasTemplate,
+} from "./templates";
 import { useWorkspace } from "./useWorkspace";
 import {
   makeItem,
@@ -71,6 +82,7 @@ import {
 import { layoutTree, snapPosition } from "./layout";
 import { useCanvasGraph } from "./useCanvasGraph";
 import { autosize } from "./measure";
+import { contextToolbarPosition } from "./contextToolbar";
 const nodeTypes = { canvas: CanvasNode },
   edgeTypes = { orthogonal: Connector };
 const tools = [
@@ -88,6 +100,7 @@ interface DragState {
 function Workbench() {
   const ws = useWorkspace(),
     rf = useReactFlow<FlowNode, FlowEdge>();
+  const floating = ws.board?.nodes.find((n) => n.floating && !n.closed) || null;
   const [selected, setSelected] = useState<string[]>([]),
     [selectedEdge, setSelectedEdge] = useState<string | null>(null),
     [editId, setEdit] = useState<string | null>(null),
@@ -101,7 +114,10 @@ function Workbench() {
         return false;
       }
     }),
-    [floating, setFloating] = useState<Item | null>(null),
+    [helpMenu, setHelpMenu] = useState(false),
+    [templateDialog, setTemplateDialog] = useState<"save" | "library" | null>(
+      null,
+    ),
     [help, setHelp] = useState(false),
     [command, setCommand] = useState(false),
     [query, setQuery] = useState(""),
@@ -161,8 +177,23 @@ function Workbench() {
             .querySelector(".canvas-surface")
             ?.getBoundingClientRect();
           if (area && entry) {
-            const zoom = Math.min(1, (area.width - 32) / entry.width);
-            void rf.setViewport({ x: 16, y: 24, zoom });
+            const reserved = window.innerHeight < 700 ? 90 : 160;
+            const zoom = Math.min(
+              1,
+              (area.width - 32) / entry.width,
+              (area.height - reserved - 24) / (entry.position.y + entry.height),
+            );
+            const left = window.innerWidth > 760 && sidebar ? 308 : 16;
+            void rf.setViewport({ x: left, y: 24, zoom }).then(() => {
+              if (ws.current.current?.boardId === boardId)
+                ws.update(
+                  (b) => {
+                    b.viewport = { x: left, y: 24, zoom };
+                  },
+                  false,
+                  false,
+                );
+            });
           }
         }, 200);
         return () => clearTimeout(timer);
@@ -175,6 +206,69 @@ function Workbench() {
     return () => clearTimeout(t);
   }, [notice]);
   const notify = (message: string) => setNotice(message);
+  const setFloating = (item: Item | null, record = true) =>
+    ws.update(
+      (b) => {
+        if (!item) {
+          const n = b.nodes.find((n) => n.floating && !n.closed);
+          if (n) n.closed = true;
+          return;
+        }
+        const n = b.nodes.find((n) => n.id === item.id);
+        const next = { ...clone(item), floating: true, closed: false };
+        if (n) Object.assign(n, next);
+        else b.nodes.push(next);
+      },
+      item ? record : false,
+    );
+  const openCalculator = () => {
+    if (ws.current.current?.guide)
+      return notify("請先建立練習副本或新的白板。");
+    const found =
+      ws.current.current?.nodes.find((n) => n.floating) ||
+      ws.current.current?.nodes.find(
+        (n) => n.kind === "calculator" && selected.includes(n.id),
+      ) ||
+      ws.current.current?.nodes.find((n) => n.kind === "calculator");
+    setFloating(found || makeItem("calculator", center()));
+  };
+  const insertTemplate = (t: CanvasTemplate) => {
+    if (ws.current.current?.guide)
+      return notify("請先建立可編輯副本或新的白板。");
+    const p = center(),
+      existing = ws.current.current?.nodes.filter((n) => !n.floating) || [];
+    const collision = t.document.nodes.some((n) =>
+      existing.some(
+        (e) =>
+          p.x + n.position.x < e.position.x + e.width + 24 &&
+          p.x + n.position.x + n.width + 24 > e.position.x &&
+          p.y + n.position.y < e.position.y + e.height + 24 &&
+          p.y + n.position.y + n.height + 24 > e.position.y,
+      ),
+    );
+    if (collision)
+      p.x = Math.max(...existing.map((e) => e.position.x + e.width)) + 80;
+    const bundle = instantiateTemplate(t, p);
+    if (
+      bundle.nodes.some(
+        (n) => Math.abs(n.position.x) > 1e7 || Math.abs(n.position.y) > 1e7,
+      )
+    )
+      return notify("畫布座標超出備份範圍，請在新白板插入範本。");
+    if (
+      (ws.current.current?.nodes.length || 0) + bundle.nodes.length > 2000 ||
+      (ws.current.current?.relations.length || 0) + bundle.relations.length >
+        5000
+    )
+      return notify("白板容量不足，請在新的白板插入範本。");
+    ws.update((b) => {
+      b.nodes.push(...bundle.nodes);
+      b.relations.push(...bundle.relations);
+    });
+    setSelected(bundle.nodes.map((n) => n.id));
+    setSelectedEdge(null);
+    focusItems(bundle.nodes);
+  };
   const patch = (nid: string, p: Partial<Item>, record = true) =>
     ws.update((b) => {
       const n = b.nodes.find((n) => n.id === nid);
@@ -204,6 +298,10 @@ function Workbench() {
     });
   };
   const add = (kind: Kind, text?: string, pos?: Point) => {
+    if (ws.current.current?.guide) {
+      notify("官方指南受保護，請建立練習副本。");
+      return "";
+    }
     const n = makeItem(kind, pos || center(), text);
     if (kind === "calculator" && !pos) {
       n.position.x -= n.width / 2 - 80;
@@ -220,6 +318,40 @@ function Workbench() {
     setSelectedEdge(null);
     if (kind !== "calculator") setEdit(n.id);
     return n.id;
+  };
+  const focusItems = (items: Item[]) => {
+    if (!items.length) return;
+    const area = document
+      .querySelector(".canvas-surface")!
+      .getBoundingClientRect();
+    const left = Math.min(...items.map((n) => n.position.x)),
+      top = Math.min(...items.map((n) => n.position.y)),
+      right = Math.max(...items.map((n) => n.position.x + n.width)),
+      bottom = Math.max(...items.map((n) => n.position.y + n.height));
+    const inset = window.innerWidth > 760 && sidebar ? 292 : 0;
+    const zoom = Math.max(
+      0.1,
+      Math.min(
+        1,
+        (area.width - inset - 80) / (right - left),
+        (area.height - 260) / (bottom - top),
+      ),
+    );
+    const bid = ws.current.current?.boardId;
+    setTimeout(() => {
+      if (ws.current.current?.boardId !== bid) return;
+      const next = { x: inset + 40 - left * zoom, y: 40 - top * zoom, zoom };
+      void rf.setViewport(next, { duration: 0 }).then(() => {
+        if (ws.current.current?.boardId === bid)
+          ws.update(
+            (b) => {
+              b.viewport = next;
+            },
+            false,
+            false,
+          );
+      });
+    }, 60);
   };
   const addTemplate = (type: "mind" | "flow") => {
     const p = center();
@@ -262,11 +394,7 @@ function Workbench() {
         );
     });
     setSelected([root.id]);
-    void rf.fitView({
-      nodes: [root, ...ns].map((n) => ({ id: n.id })),
-      padding: 0.35,
-      duration: 200,
-    });
+    focusItems([root, ...ns]);
   };
   const insertResult = (text: string, pos?: Point) => add("text", text, pos);
   const toggle = (nid: string) =>
@@ -555,6 +683,7 @@ function Workbench() {
     setGuide({});
   };
   const nodeClick: NodeMouseHandler<FlowNode> = (_, n) => {
+    if (ws.current.current?.guide) return;
     if (connectSource) {
       addRelation(connectSource, n.id);
       return;
@@ -610,6 +739,9 @@ function Workbench() {
         help ||
         command ||
         settings ||
+        helpMenu ||
+        templateDialog ||
+        (ws.current.current?.guide && e.key !== "/") ||
         deleteBoard ||
         resetGuide
       )
@@ -692,7 +824,6 @@ function Workbench() {
       return;
     }
     setFloating(clone(n));
-    ws.update((b) => removeItems(b, [nid]));
     setSelected([]);
   };
   const fileImport = () => importInput.current?.click();
@@ -701,31 +832,27 @@ function Workbench() {
   const viewport = rf.getViewport();
   const surface = document.querySelector(".canvas-surface");
   const contextPosition = selectedItem
-    ? {
-        left: Math.max(
-          12,
-          Math.min(
-            (surface?.clientWidth || 900) - 530,
-            selectedItem.position.x * viewport.zoom + viewport.x,
-          ),
-        ),
-        top: Math.max(
-          12,
-          Math.min(
-            (surface?.clientHeight || 700) - 170,
-            selectedItem.position.y * viewport.zoom + viewport.y - 48,
-          ),
-        ),
-        bottom: "auto",
-        transform: "none",
-      }
-    : undefined;
+    ? contextToolbarPosition(
+        visible,
+        selectedItem,
+        viewport,
+        {
+          width: surface?.clientWidth || 900,
+          height: surface?.clientHeight || 700,
+        },
+        window.innerWidth > 760 && sidebar ? 292 : 0,
+        window.innerWidth > 760 && inspector ? 300 : 0,
+      )
+    : null;
   const commands = [
+    ...(selected.length > 0 && !board.guide
+      ? [{ label: "儲存為我的範本", run: () => setTemplateDialog("save") }]
+      : []),
     ...tools.map((t) => ({ label: `新增${t.label}`, run: () => add(t.kind) })),
-    { label: "釘選計算機", run: () => add("calculator") },
+    { label: "計算機", run: openCalculator },
     {
       label: "適應全部內容",
-      run: () => rf.fitView({ padding: 0.2, duration: 250 }),
+      run: () => focusItems(visible),
     },
     { label: "復原", run: ws.undo },
     { label: "重作", run: ws.redo },
@@ -734,8 +861,12 @@ function Workbench() {
   return (
     <CanvasContext.Provider
       value={{
+        readOnly: !!board.guide,
+        practice: () => void ws.duplicate(board.boardId),
         editId,
-        setEdit,
+        setEdit: (nid) => {
+          if (!board.guide) setEdit(nid);
+        },
         patch,
         checkpoint: ws.checkpoint,
         insertResult,
@@ -752,6 +883,21 @@ function Workbench() {
         dataSettings: () => setSettings(true),
       }}
     >
+      {templateDialog && (
+        <TemplateDialog
+          mode={templateDialog}
+          templates={ws.templates}
+          selected={selected.length}
+          close={() => setTemplateDialog(null)}
+          save={async (name) => {
+            await ws.saveTemplate(captureTemplate(board, selected, name));
+            notify("已儲存至我的範本");
+          }}
+          insert={insertTemplate}
+          rename={ws.renameTemplate}
+          remove={ws.removeTemplate}
+        />
+      )}
       {settings && (
         <DataSettings
           close={() => setSettings(false)}
@@ -764,7 +910,6 @@ function Workbench() {
           name={board.name}
           notify={notify}
           help={() => setHelp(true)}
-          reset={board.guide ? () => setResetGuide(true) : undefined}
         />
       )}
       {resetGuide && (
@@ -822,7 +967,10 @@ function Workbench() {
               void ws.open(bid);
               if (window.innerWidth <= 760) setSidebar(false);
             }}
-            onAdd={() => void ws.add().catch((e) => ws.setError(String(e)))}
+            onAdd={() => {
+              void ws.add().catch((e) => ws.setError(String(e)));
+              if (window.innerWidth <= 760) setSidebar(false);
+            }}
             onRename={(bid, name) => void ws.rename(bid, name)}
             onDuplicate={(bid) => void ws.duplicate(bid)}
             onDelete={setDeleteBoard}
@@ -834,9 +982,16 @@ function Workbench() {
             <div className="board-title">
               <button
                 aria-label={sidebar ? "收合白板清單" : "展開白板清單"}
+                title={sidebar ? "收合白板清單" : "展開白板清單"}
+                aria-expanded={sidebar}
+                aria-controls="board-sidebar"
                 onClick={() => setSidebar(!sidebar)}
               >
-                <PanelLeftOpen size={22} />
+                {sidebar ? (
+                  <PanelLeftClose size={22} />
+                ) : (
+                  <PanelLeftOpen size={22} />
+                )}
               </button>
               <div className="header-brand">
                 <img
@@ -886,6 +1041,57 @@ function Workbench() {
               >
                 <Settings2 size={22} />
               </button>
+              <div
+                className="help-entry"
+                onBlur={(e) => {
+                  if (!e.currentTarget.contains(e.relatedTarget as Node))
+                    setHelpMenu(false);
+                }}
+              >
+                <button
+                  aria-label="說明與幫助"
+                  title="說明與幫助"
+                  aria-expanded={helpMenu}
+                  onClick={() => setHelpMenu(!helpMenu)}
+                >
+                  <CircleHelp size={22} />
+                </button>
+                {helpMenu && (
+                  <div className="help-menu" role="menu">
+                    <button
+                      role="menuitem"
+                      disabled={!!board.guide}
+                      onClick={() => {
+                        setHelpMenu(false);
+                        void ws.createGuide();
+                      }}
+                    >
+                      <BookOpen size={20} />
+                      Mind Canvas 使用指南
+                    </button>
+                    <button
+                      role="menuitem"
+                      onClick={() => {
+                        setHelpMenu(false);
+                        setHelp(true);
+                      }}
+                    >
+                      操作說明
+                    </button>
+                    {board.guide && (
+                      <button
+                        role="menuitem"
+                        onClick={() => {
+                          setHelpMenu(false);
+                          void ws.duplicate(board.boardId);
+                        }}
+                      >
+                        建立可編輯副本
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </header>
           <div
@@ -896,6 +1102,9 @@ function Workbench() {
             <ReactFlow<FlowNode, FlowEdge>
               key={board.boardId}
               nodes={nodes}
+              nodesDraggable={!board.guide}
+              nodesConnectable={!board.guide}
+              elementsSelectable={!board.guide}
               edges={edges}
               nodeTypes={nodeTypes}
               edgeTypes={edgeTypes}
@@ -977,7 +1186,15 @@ function Workbench() {
                 }
                 maskColor={dark ? "rgba(10,14,23,.6)" : "rgba(247,249,252,.65)"}
               />
-              <Controls showInteractive={false} />
+              <Controls showInteractive={false} showFitView={false}>
+                <ControlButton
+                  aria-label="Fit View"
+                  title="適應畫面"
+                  onClick={() => focusItems(visible)}
+                >
+                  <Maximize2 size={16} />
+                </ControlButton>
+              </Controls>
               {(guide.gx !== undefined || guide.gy !== undefined) && (
                 <svg className="guide-svg">
                   {guide.gx !== undefined && (
@@ -999,24 +1216,79 @@ function Workbench() {
                 </svg>
               )}
             </ReactFlow>
-            <ToolLibrary
-              add={add}
-              template={addTemplate}
-              connect={() => {
-                setConnectSource(selected[0]);
-                notify("請點選目標物件，建立自由關聯線");
-              }}
-              selected={selected.length}
-              align={align}
-              arrange={() => arrange(selectedItem?.layout || "right")}
-              floating={() =>
-                setFloating(floating || makeItem("calculator", { x: 0, y: 0 }))
-              }
-              undo={ws.undo}
-              redo={ws.redo}
-              canUndo={ws.canUndo}
-              canRedo={ws.canRedo}
-            />
+            {board.guide ? (
+              <div className="guide-learning-bar">
+                <span>官方指南 · 原稿受保護</span>
+                <button onClick={() => void ws.duplicate(board.boardId)}>
+                  建立可編輯副本
+                </button>
+                <label>
+                  閱讀章節
+                  <select
+                    aria-label="閱讀指南章節"
+                    defaultValue=""
+                    onChange={(e) => {
+                      const n = board.nodes.find(
+                        (n) => n.id === e.target.value,
+                      );
+                      if (n) {
+                        const z = Math.min(
+                          1,
+                          (document.querySelector(".canvas-surface")!
+                            .clientWidth -
+                            32) /
+                            320,
+                        );
+                        const next = {
+                          x: window.innerWidth > 760 && sidebar ? 308 : 16,
+                          y: 24 - n.position.y * z,
+                          zoom: z,
+                        };
+                        void rf.setViewport(next).then(() =>
+                          ws.update(
+                            (b) => {
+                              b.viewport = next;
+                            },
+                            false,
+                            false,
+                          ),
+                        );
+                      }
+                    }}
+                  >
+                    <option value="">選擇章節</option>
+                    {board.nodes
+                      .filter((n) => /^0[1-6] /.test(n.text))
+                      .map((n) => (
+                        <option key={n.id} value={n.id}>
+                          {n.text}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+              </div>
+            ) : (
+              <ToolLibrary
+                insertTemplate={insertTemplate}
+                myTemplates={() => setTemplateDialog("library")}
+                layout={arrange}
+                canLayout={selectedItem?.kind === "mind"}
+                add={add}
+                template={addTemplate}
+                connect={() => {
+                  setConnectSource(selected[0]);
+                  notify("請點選目標物件，建立自由關聯線");
+                }}
+                selected={selected.length}
+                align={align}
+                arrange={() => arrange(selectedItem?.layout || "right")}
+                floating={openCalculator}
+                undo={ws.undo}
+                redo={ws.redo}
+                canUndo={ws.canUndo}
+                canRedo={ws.canRedo}
+              />
+            )}
             {visible.length === 0 && (
               <div className="canvas-heading">
                 <span>THINK WITHOUT BOUNDARIES</span>
@@ -1036,7 +1308,7 @@ function Workbench() {
                 {blocked} 條連線暫停顯示：端點受遮擋，請分開重疊物件。
               </div>
             )}
-            {selectedItem && !editId && (
+            {selectedItem && !editId && contextPosition && (
               <div className="layout-bar context-tools" style={contextPosition}>
                 <button
                   aria-label="編輯選取物件"
@@ -1068,6 +1340,9 @@ function Workbench() {
                   連線
                 </button>
                 <span>局部整理</span>
+                <button onClick={() => setTemplateDialog("save")}>
+                  儲存為我的範本
+                </button>
                 {selectedItem.kind === "mind" &&
                   (["right", "split", "radial"] as LayoutMode[]).map((m, i) => (
                     <button key={m} onClick={() => arrange(m)}>
@@ -1131,27 +1406,35 @@ function Workbench() {
                 }
                 onAlign={align}
                 onTreeStyle={(p) =>
-                  ws.update((b) => Object.assign(b.treeStyle, p))
+                  ws.update((b) => {
+                    Object.assign(b.treeStyle, p);
+                    if (selectedItem?.kind === "mind") {
+                      const r = b.nodes.find(
+                        (n) => n.id === rootId(b, selectedItem.id),
+                      );
+                      if (r?.treeStyle) Object.assign(r.treeStyle, p);
+                    }
+                  })
                 }
               />
             )}
             {floating && (
               <FloatingCalculator
+                key={floating.id}
                 item={floating}
                 onChange={setFloating}
                 onInsert={() => insertResult(floating.result)}
                 onClose={() => setFloating(null)}
                 onPin={() => {
-                  const n = {
-                    ...clone(floating),
-                    id: id(),
-                    position: center(),
-                  };
-                  n.position.x -= n.width / 2 - 80;
-                  n.position.y -= n.height / 2 - 30;
-                  ws.update((b) => b.nodes.push(n));
-                  setFloating(null);
-                  setSelected([n.id]);
+                  const p = center();
+                  p.x -= floating.width / 2 - 80;
+                  p.y -= floating.height / 2 - 30;
+                  patch(floating.id, {
+                    floating: false,
+                    closed: false,
+                    position: p,
+                  });
+                  setSelected([floating.id]);
                 }}
               />
             )}

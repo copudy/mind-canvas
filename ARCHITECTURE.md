@@ -1,5 +1,13 @@
 # 架構與決策
 
+## v1.1 本機增量（最新）
+
+templates.ts以既有Board／Item／Relation捕捉、正規化相對座標及重新產生插入ID，保留內部樹／圖及樣式；TemplateDialog重用單一儲存／改名／刪除介面。IndexedDB版本1不变，meta新增templates-v1，完整匯入在單交易写入白板與範本；JSON容器2搭配仍為1的Board schema，兼容舊容器1。
+
+官方Guide保護在Workspace內容命令與渲染／互動兩層，副本删除guide標記，老指南先原子保存練習副本；Header是指南唯一導覽入口。floating／closed／floatPosition為計算機可選狀態，保留同一ID及關聯。
+
+側欄絕對定位，畫布尺寸與視角不隨收合改變；適應畫面預留面板，完成時顯式保存視角。contextToolbar.ts在投影物件外尋找空白區，避免操作列擋住兄弟節點。未換框架、無新執行依賴。詳細見V11_REPORT。
+
 目前增量以末節「全站 UI/UX 整頓架構增量」及 SYSTEM_UX_REPORT.md 為準；前段保留架構演進記錄。
 
 ## 選型（2026-10-11）

@@ -1,5 +1,9 @@
 # 開發進度與恢復
 
+## v1.1 本機開發（最新）
+
+已在develop/v1.1.0完成指南保護與副本、計算機同ID模式、六官方／自訂範本、完整備份與原子還原、側欄穩定視角及情境操作避障。靜態檢查／建置／單元與瀏覽器最終結果見TEST_REPORT与V11_REPORT；目前收斂測試與交付，不追加功能。原main／v1.0 Tag不變，未Push或部署。等待「Demo OK，可以部署 v1.1.0」。
+
 ## v1.0.0 正式發布完成（最新）
 
 2026-10-11：使用者授權首次發布並確認Public；已完成指定copudy/mind-canvas建立、正常Push main與新v1.0.0 Tag、Actions Pages部署及正式2/2瀏覽器驗證。本機52／42回歸通過。部署Commit40f576f38143426e033224f1db17407b804c1cba、Actions38135027542成功。未改UI或其他PD-1專案，未Force Push。下一步僅使用者手動驗證E項目；後續更新須另授權。接手先讀HANDOFF最新節、DEPLOYMENT及RELEASE_SOP，不重建或重部署。

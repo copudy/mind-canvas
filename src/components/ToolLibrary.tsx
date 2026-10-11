@@ -21,6 +21,8 @@ import {
   Network,
 } from "lucide-react";
 import type { Kind } from "../model";
+import type { LayoutMode } from "../model";
+import { officialTemplates, type CanvasTemplate } from "../templates";
 export const categories = [
   "思考框架",
   "文字筆記",
@@ -41,6 +43,10 @@ export default function ToolLibrary({
   redo,
   canUndo,
   canRedo,
+  insertTemplate,
+  myTemplates,
+  layout,
+  canLayout,
 }: {
   add: (k: Kind, text?: string) => unknown;
   template: (type: "mind" | "flow") => void;
@@ -53,6 +59,10 @@ export default function ToolLibrary({
   redo: () => void;
   canUndo: boolean;
   canRedo: boolean;
+  insertTemplate: (t: CanvasTemplate) => void;
+  myTemplates: () => void;
+  layout: (mode: LayoutMode) => void;
+  canLayout: boolean;
 }) {
   const [category, setCategory] =
     useState<(typeof categories)[number]>("思考框架");
@@ -122,6 +132,10 @@ export default function ToolLibrary({
         <div className="library-tools" role="toolbar" aria-label={category}>
           {category === "思考框架" && (
             <>
+              {officialTemplates.map((t) =>
+                tool(t.name, Network, () => insertTemplate(t)),
+              )}
+              {tool("我的範本", Layout, myTemplates)}
               {tool(
                 "心智圖節點",
                 GitBranch,
@@ -162,8 +176,7 @@ export default function ToolLibrary({
             tool("正交關聯線", Link2, connect, !selected, "建立關聯線")}
           {category === "實用工具" && (
             <>
-              {tool("浮動計算機", Calculator, floating)}
-              {tool("釘選計算機", Calculator, () => add("calculator"))}
+              {tool("計算機", Calculator, floating)}
               {tool("日期標記", Type, () =>
                 add("text", new Date().toLocaleDateString("zh-TW")),
               )}
@@ -171,6 +184,9 @@ export default function ToolLibrary({
           )}
           {category === "排版整理" && (
             <>
+              {tool("向右", GitBranch, () => layout("right"), !canLayout)}
+              {tool("左右", Network, () => layout("split"), !canLayout)}
+              {tool("放射", Network, () => layout("radial"), !canLayout)}
               {tool("靠左對齊", AlignLeft, () => align("left"), selected < 2)}
               {tool(
                 "置中對齊",
