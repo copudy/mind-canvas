@@ -52,7 +52,7 @@ async function reloadToLast(page: Page) {
 async function clickTool(page: Page, name: string) {
   const category: Record<string, string> = {
     新增自由文字: "文字筆記",
-    新增便條紙: "文字筆記",
+    新增便條紙: "實用工具",
     新增矩形: "圖形圖表",
     新增橢圓: "圖形圖表",
     釘選計算機: "實用工具",

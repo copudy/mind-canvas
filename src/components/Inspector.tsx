@@ -205,7 +205,8 @@ export default function Inspector({
               自動尺寸
               <input
                 type="checkbox"
-                checked={item.autoSize}
+                disabled={!!item.widget}
+                checked={item.autoSize && !item.widget}
                 onChange={(e) => patch({ autoSize: e.target.checked })}
               />
             </label>

@@ -1,3 +1,4 @@
+import { makeWidget, type Widget } from "./widgets";
 import GuidePage from "./components/GuidePage";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -285,6 +286,15 @@ function Workbench() {
     setSelectedEdge(null);
     if (kind !== "calculator") setEdit(n.id);
     return n.id;
+  };
+  const addWidget = (type: Widget["type"]) => {
+    if (ws.current.current?.guide) return;
+    const n = makeWidget(type, center());
+    ws.update((b) => b.nodes.push(n));
+    setSelected([n.id]);
+    setSelectedEdge(null);
+    setEdit(null);
+    focusItems([n]);
   };
   const focusItems = (items: Item[]) => {
     if (!items.length) return;
@@ -1191,6 +1201,7 @@ function Workbench() {
             )}
             {!board.guide && (
               <ToolLibrary
+                widget={addWidget}
                 insertTemplate={insertTemplate}
                 myTemplates={() => setTemplateDialog("library")}
                 layout={arrange}

@@ -1,7 +1,7 @@
 import type { Item } from "./model";
 let context: CanvasRenderingContext2D | null = null;
 export function autosize(n: Item) {
-  if (!n.autoSize || n.kind === "calculator") return;
+  if (!n.autoSize || n.kind === "calculator" || n.widget) return;
   if (typeof document === "undefined") return;
   context ??= document.createElement("canvas").getContext("2d");
   if (!context) return;

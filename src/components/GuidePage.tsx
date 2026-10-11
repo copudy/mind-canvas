@@ -66,7 +66,7 @@ export default function GuidePage({
             <p className="guide-eyebrow">01 · 基本操作</p>
             <h3>先放下一個念頭</h3>
             <p>
-              建立白板後，從底部工具庫加入文字或便條紙。雙擊物件編輯，拖動物件調整位置。
+              建立白板後，從「文字筆記」加入文字、圖示或表格；便條紙在「實用工具」。雙擊物件編輯，拖動物件調整位置。
             </p>
             <dl>
               <dt>選取與移動</dt>
@@ -107,8 +107,8 @@ export default function GuidePage({
             <p className="guide-eyebrow">03 · 範本與關係</p>
             <h3>需要結構時，再套用框架</h3>
             <p>
-              思考框架提供
-              SWOT、5W1H、決策矩陣、WBS、旅行規劃及會議紀錄。插入後的內容可以自由修改。
+              一個心智圖節點是起點，範本則是整組可編輯的結構。游標停在工具上可先看用途與簡圖，再選擇
+              SWOT、5W1H、決策矩陣、WBS、旅行或會議框架。
             </p>
             <div className="guide-example guide-flow">
               <span>收集想法</span>

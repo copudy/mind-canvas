@@ -1,4 +1,5 @@
 import { openDB, type DBSchema } from "idb";
+import { validWidget } from "./widgets";
 import { clone, id, type Board, type Item, type Relation } from "./model";
 import { validateTemplates, type CanvasTemplate } from "./templates";
 interface CanvasDB extends DBSchema {
@@ -140,6 +141,7 @@ export function validateBoard(raw: unknown): Board {
         "calculator",
       ].includes(String(v.kind)) ||
       !str(v.text) ||
+      (v.widget !== undefined && !validWidget(v.widget)) ||
       !point(v.position) ||
       !num(v.width, 40, 3000) ||
       !num(v.height, 32, 3000) ||
@@ -256,7 +258,13 @@ export function exportProject(
   return JSON.stringify(
     {
       format: "freeform-mind-canvas",
-      schemaVersion: templates?.length ? 2 : 1,
+      schemaVersion:
+        boards.some((b) => b.nodes.some((n) => n.widget)) ||
+        templates?.some((t) => t.document.nodes.some((n) => n.widget))
+          ? 3
+          : templates?.length
+            ? 2
+            : 1,
       boards,
       ...(templates ? { templates } : {}),
     },
@@ -285,7 +293,9 @@ export function importProject(text: string): Board[] {
   if (
     !object(raw) ||
     raw.format !== "freeform-mind-canvas" ||
-    (raw.schemaVersion !== 1 && raw.schemaVersion !== 2) ||
+    (raw.schemaVersion !== 1 &&
+      raw.schemaVersion !== 2 &&
+      raw.schemaVersion !== 3) ||
     !Array.isArray(raw.boards) ||
     !raw.boards.length ||
     raw.boards.length > 100

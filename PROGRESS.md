@@ -1,5 +1,9 @@
 # 開發進度與恢復
 
+## v1.2.0 發布執行（最新）
+
+已按使用者授權完成工具庫排序／游標預覽、圖示／表格／小日曆與便條紙分類。Lint／Build、63 單元、55 完整瀏覽器回歸全通過；準備正常推送 main／v1.2.0 與既有 Pages 部署。功能收斂，不追加需求。詳見 V12_REPORT／HANDOFF 最新紀錄。
+
 ## v1.1.1 已正式上線（最新，2026-10-12）
 
 使用者已授權調整後直接部署，正式網址 https://copudy.github.io/mind-canvas/ ，Repository https://github.com/copudy/mind-canvas 。分支 main，annotated Tag v1.1.1，發布 Commit `0459123fc8a2837f74175ea96fe3853f38622e8f`；Actions https://github.com/copudy/mind-canvas/actions/runs/38154965129 build／deploy 成功。v1.1.0／v1.0.0 標記與歷史保留，未 Force Push。

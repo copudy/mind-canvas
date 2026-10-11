@@ -1,3 +1,4 @@
+import { TemplateThumbnail } from "./ToolPreview";
 import { useState } from "react";
 import { X } from "lucide-react";
 import type { CanvasTemplate } from "../templates";
@@ -79,6 +80,7 @@ export default function TemplateDialog(p: {
               <article className="template-row" key={t.id}>
                 <strong>{t.name}</strong>
                 <p>{t.description}</p>
+                <TemplateThumbnail document={t.document} />
                 {editing === t.id ? (
                   <form
                     onSubmit={(e) => {

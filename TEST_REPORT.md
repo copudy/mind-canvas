@@ -1,5 +1,11 @@
 # 第一次原型測試報告
 
+## v1.2.0 發布前最終回歸（最新）
+
+A：Lint／正式 PWA Build、63/63 單元、55/55 完整瀏覽器回歸通過（3.4 分鐘）。新增涵蓋工具排序、用途差異與預覽不插入、表格編輯／增減／确认／復原、我的範本／格式3完整還原、圖示更換、日期記事未失焦自動儲存、月份瀏覽、鍵盤隔離與手機預覽。舊核心／JSON／IDB／PWA／指南與白板管理保持通過。
+
+預覽事件競爭透過瀏覽器事件記錄修正；舊 JSON 測試曾因名稱結尾相同選到原始 fixture，改為精確副本名稱，保留新 ID、原件不變與逐欄比對。沒有移除必要斷言或 Force Click。正式結果待部署後追加。
+
 ## v1.1.1 已正式上線（最新，2026-10-12）
 
 使用者已授權調整後直接部署，正式網址 https://copudy.github.io/mind-canvas/ ，Repository https://github.com/copudy/mind-canvas 。分支 main，annotated Tag v1.1.1，發布 Commit `0459123fc8a2837f74175ea96fe3853f38622e8f`；Actions https://github.com/copudy/mind-canvas/actions/runs/38154965129 build／deploy 成功。v1.1.0／v1.0.0 標記與歷史保留，未 Force Push。

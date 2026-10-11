@@ -1,5 +1,11 @@
 # Mind Canvas 安全交接
 
+## v1.2.0 工具更新發布執行（最新）
+
+2026-10-12 使用者明確授權排序、游標預覽、圖示／表格／小日曆及便條紙分類更新後直接部署。分支 feature/v1.2.0-tools，版本 1.2.0。本機 Lint／Build、63/63 單元及 55/55 完整瀏覽器流程通過（3.4 分鐘）。詳見 V12_REPORT.md；沿用公開 copudy/mind-canvas 與 main／Pages workflow，新標記 v1.2.0，舊標記不移動。正式結果完成後記錄於最上方。
+
+DB 名稱與版本不變，Item.widget 為可選欄位。含新小工具的 JSON 容器 3，新版相容 1／2／3；舊版本不可還原 3，不應用舊客戶端編輯新工具文件。使用者資料不清除。
+
 ## v1.1.1 已正式上線（最新，2026-10-12）
 
 使用者已授權調整後直接部署，正式網址 https://copudy.github.io/mind-canvas/ ，Repository https://github.com/copudy/mind-canvas 。分支 main，annotated Tag v1.1.1，發布 Commit `0459123fc8a2837f74175ea96fe3853f38622e8f`；Actions https://github.com/copudy/mind-canvas/actions/runs/38154965129 build／deploy 成功。v1.1.0／v1.0.0 標記與歷史保留，未 Force Push。

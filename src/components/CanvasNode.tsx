@@ -6,6 +6,7 @@ import {
   useState,
   type CSSProperties,
 } from "react";
+import CanvasWidget from "./CanvasWidget";
 import {
   Handle,
   NodeResizer,
@@ -220,6 +221,26 @@ export default function CanvasNode({
     if (draft !== item.text) actions.patch(id, { text: draft });
     actions.setEdit(null);
   };
+  const minWidth =
+    item.kind === "calculator"
+      ? 260
+      : item.widget?.type === "calendar"
+        ? 260
+        : item.widget?.type === "table"
+          ? 240
+          : item.widget
+            ? 140
+            : 80;
+  const minHeight =
+    item.kind === "calculator"
+      ? 335
+      : item.widget?.type === "calendar"
+        ? 370
+        : item.widget?.type === "table"
+          ? 170
+          : item.widget
+            ? 160
+            : 40;
   const style: CSSProperties = {
     background: item.background,
     borderColor: item.border,
@@ -237,8 +258,8 @@ export default function CanvasNode({
     >
       <NodeResizer
         isVisible={selected && !editing && !actions.readOnly}
-        minWidth={item.kind === "calculator" ? 260 : 80}
-        minHeight={item.kind === "calculator" ? 335 : 40}
+        minWidth={minWidth}
+        minHeight={minHeight}
         maxWidth={3000}
         maxHeight={3000}
         onResizeStart={() => {
@@ -250,8 +271,8 @@ export default function CanvasNode({
           actions.patch(
             id,
             {
-              width: Math.max(item.kind === "calculator" ? 260 : 80, p.width),
-              height: Math.max(item.kind === "calculator" ? 335 : 40, p.height),
+              width: Math.max(minWidth, p.width),
+              height: Math.max(minHeight, p.height),
               autoSize: false,
             },
             false,
@@ -275,7 +296,14 @@ export default function CanvasNode({
           isConnectable={!actions.readOnly}
         />
       ))}
-      {item.kind === "calculator" ? (
+      {item.widget && !editing ? (
+        <CanvasWidget
+          item={item}
+          patch={(p, r) => actions.patch(id, p, r)}
+          checkpoint={actions.checkpoint}
+          edit={() => actions.setEdit(id)}
+        />
+      ) : item.kind === "calculator" ? (
         <>
           <div className="calc-drag">
             ⠿ <span>預算計算機</span>

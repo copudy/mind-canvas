@@ -8,6 +8,7 @@ export interface Point {
   y: number;
 }
 export interface Item {
+  widget?: import("./widgets").Widget;
   treeStyle?: { color: string; width: number; dashed: boolean };
   floating?: boolean;
   closed?: boolean;

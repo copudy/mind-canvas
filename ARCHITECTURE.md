@@ -1,5 +1,11 @@
 # 架構與決策
 
+## v1.2.0 可攜小工具與預覽
+
+可選 Item.widget 保存 icon／table／calendar，不增加大型畫布框架。CanvasWidget 在既有節點內渲染；穩定 ID、拖曳／調整尺寸／關聯／複製／範本／背景儲存沿用既有路徑。輸入在 focus 記錄 checkpoint、change 更新不重複建立歷史；autosize 排除小工具。widgets.ts 集中邊界與日期驗證。含 widget 的匯出容器為 3，匯入仍讀 1／2／3，DB 版本未變。
+
+ToolPreview 用 portal 避開工具庫的裁切，圖形從實際 Template 文件生成，pointer-events:none；滑鼠移動與鍵盤焦點分開避免捲動產生的事件覆寫。我的範本也使用同一縮圖 renderer。
+
 ## v1.1.1 文件指南
 
 GuidePage 在官方指南分支以原生捲動與 CSS Grid 呈現；普通白板保持原 XYFlow 渲染。指南不再使用 RF 視角，不改 DB 文件格式，問候讀取原指南節點，resume／create／backup 共用既有 Workspace／Settings 動作。官方指南 duplicate 在 Workspace 層禁止，原副本不刪除。

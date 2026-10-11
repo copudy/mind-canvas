@@ -348,7 +348,7 @@ test("JSON browser roundtrip preserves every guide object field and calculator w
   await page.reload();
   await saved(page);
   const data = await boards(page),
-    imported = data.find((b) => b.name.endsWith("（匯入）"));
+    imported = data.find((b) => b.name === `${before.name}（匯入）`);
   expect(data).toHaveLength(3);
   const original = data.find((b) => b.boardId === before.boardId);
   expect(original).toEqual(before);
