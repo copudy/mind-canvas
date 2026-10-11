@@ -1,8 +1,57 @@
 import { test, expect, type Page } from "@playwright/test";
-import { makeBoard, makeItem } from "../src/model";
+import { makeBoard, makeItem, demoBoard } from "../src/model";
 async function ready(page: Page, url = "/") {
   await page.goto(url);
   await expect(page.getByText("已儲存於此裝置", { exact: true })).toBeVisible();
+  const initialBoards = await readBoards(page);
+  if (initialBoards.length === 1 && initialBoards[0].guide) {
+    await expect
+      .poll(async () => (await readBoards(page))[0].viewport.zoom)
+      .not.toBe(0.55);
+    await saved(page);
+  }
+  // Legacy regression fixture is isolated from the new first-use guide tests.
+  const seeded = await page.evaluate(async (demo) => {
+    const db = await new Promise<IDBDatabase>((resolve) => {
+      const r = indexedDB.open("freeform-mind-canvas", 1);
+      r.onsuccess = () => resolve(r.result);
+    });
+    const existing = await new Promise<any[]>((resolve) => {
+      const r = db.transaction("boards").objectStore("boards").getAll();
+      r.onsuccess = () => resolve(r.result);
+    });
+    if (existing.length !== 1 || !existing[0].guide) {
+      db.close();
+      return false;
+    }
+    const tx = db.transaction(["boards", "meta"], "readwrite");
+    tx.objectStore("boards").delete(existing[0].boardId);
+    tx.objectStore("boards").put(demo);
+    tx.objectStore("meta").put(demo.boardId, "active");
+    await new Promise<void>((resolve) => {
+      tx.oncomplete = () => resolve();
+    });
+    db.close();
+    return true;
+  }, demoBoard());
+  if (seeded) await page.reload();
+  await expect(page.getByText("已儲存於此裝置", { exact: true })).toBeVisible();
+}
+async function clickTool(page: Page, name: string) {
+  const category: Record<string, string> = {
+    新增自由文字: "文字筆記",
+    新增便條紙: "文字筆記",
+    新增矩形: "圖形圖表",
+    新增橢圓: "圖形圖表",
+    釘選計算機: "實用工具",
+    浮動計算機: "實用工具",
+    建立關聯線: "連線關係",
+    新增心智圖節點: "思考框架",
+  };
+  const toggle = page.getByRole("button", { name: "展開工具庫", exact: true });
+  if (await toggle.isVisible()) await toggle.click();
+  await page.getByRole("tab", { name: category[name], exact: true }).click();
+  await page.getByRole("button", { name, exact: true }).click();
 }
 const nodes = (page: Page) => page.locator(".react-flow__node");
 const node = (page: Page, text: string) =>
@@ -35,9 +84,7 @@ test("create edit keyboard tree collapse and undo/redo", async ({ page }) => {
   await ready(page);
   expect(await nodes(page).count()).toBe(7);
   await page.getByRole("button", { name: "新的白板 ＋", exact: true }).click();
-  await page
-    .getByRole("button", { name: "新增心智圖節點", exact: true })
-    .click();
+  await clickTool(page, "新增心智圖節點");
   await edit(page, "專案主題");
   expect(await nodes(page).count()).toBe(1);
   await node(page, "專案主題").click();
@@ -88,7 +135,7 @@ test("pinned calculator precision, invalid input, result nodes and persisted dim
 }) => {
   await ready(page);
   await page.getByRole("button", { name: "新的白板 ＋", exact: true }).click();
-  await page.getByRole("button", { name: "釘選計算機", exact: true }).click();
+  await clickTool(page, "釘選計算機");
   const calc = page.locator(".canvas-item.calculator");
   const input = calc.getByRole("textbox", { name: "計算機算式" });
   await input.fill("0.1+0.2");
@@ -140,7 +187,7 @@ test("independent boards, rename duplicate search and JSON roundtrip", async ({
 }) => {
   await ready(page);
   await page.getByRole("button", { name: "新的白板 ＋", exact: true }).click();
-  await page.getByRole("button", { name: "新增便條紙", exact: true }).click();
+  await clickTool(page, "新增便條紙");
   await edit(page, "獨立白板資料");
   await saved(page);
   await page
@@ -278,7 +325,7 @@ test("multi-selection, batch styles, copy paste and free relation independence",
   await page.keyboard.press("Control+d");
   await expect(nodes(page)).toHaveCount(2);
   await nodes(page).first().click();
-  await page.getByRole("button", { name: "建立關聯線", exact: true }).click();
+  await clickTool(page, "建立關聯線");
   await nodes(page).last().click();
   await saved(page);
   b = (await readBoards(page)).find((b) => b.name === "新的白板");
@@ -297,7 +344,7 @@ test("production PWA installs cache, reloads offline and saves calculator state"
     .poll(() => page.evaluate(() => !!navigator.serviceWorker.controller))
     .toBe(true);
   await page.getByRole("button", { name: "新的白板 ＋", exact: true }).click();
-  await page.getByRole("button", { name: "釘選計算機", exact: true }).click();
+  await clickTool(page, "釘選計算機");
   const input = page.getByRole("textbox", { name: "計算機算式" });
   await input.fill("1200*3+800");
   await input.press("Enter");
@@ -329,7 +376,7 @@ test("mobile viewport supports text editing and theme toggle", async ({
   await page.setViewportSize({ width: 390, height: 844 });
   await ready(page);
   await page.getByRole("button", { name: "收合白板清單", exact: true }).click();
-  await page.getByRole("button", { name: "新增自由文字", exact: true }).click();
+  await clickTool(page, "新增自由文字");
   await edit(page, "手機基本編輯");
   await expect(page.getByText("手機基本編輯", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "切換深色主題", exact: true }).click();
@@ -371,7 +418,7 @@ test("storage failures are visible and never claim success", async ({
       return original.call(this, value, key!);
     };
   });
-  await page.getByRole("button", { name: "新增自由文字", exact: true }).click();
+  await clickTool(page, "新增自由文字");
   await edit(page, "應提示儲存失敗");
   await expect(page.getByRole("alert")).toContainText("儲存失敗");
   await expect(page.locator(".save-status")).toHaveText("儲存失敗");
@@ -472,7 +519,7 @@ test("floating calculator can pin, connect, unpin and undo", async ({
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await ready(page);
   await page.getByRole("button", { name: "新的白板 ＋", exact: true }).click();
-  await page.getByRole("button", { name: "浮動計算機", exact: true }).click();
+  await clickTool(page, "浮動計算機");
   const floating = page.locator(".floating-calculator");
   await floating
     .getByRole("textbox", { name: "計算機算式" })
@@ -531,6 +578,9 @@ test("viewport restores independently and drawing connection uses boundary handl
 }) => {
   await ready(page);
   await page.getByRole("button", { name: "Zoom Out", exact: true }).click();
+  await expect
+    .poll(async () => (await readBoards(page))[0].viewport.zoom)
+    .toBe(0.65);
   await saved(page);
   const before = (await readBoards(page))[0];
   await page.getByRole("button", { name: "新的白板 ＋", exact: true }).click();
@@ -680,7 +730,7 @@ test("long multiline auto-size remains exportable and fully restores", async ({
 }) => {
   await ready(page);
   await page.getByRole("button", { name: "新的白板 ＋", exact: true }).click();
-  await page.getByRole("button", { name: "新增自由文字", exact: true }).click();
+  await clickTool(page, "新增自由文字");
   const text = Array.from(
     { length: 300 },
     (_, i) => `第 ${i + 1} 行長文字與思考`,

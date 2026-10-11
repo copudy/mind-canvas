@@ -1,0 +1,34 @@
+/* PD-1 Center globals.css / Header.tsx · 官方主色及字體，工作區採獨立淺色 */
+:root {
+  --brand-background: #0a0e17;
+  --brand-surface: #111827;
+  --brand-elevated: #1a2235;
+  --brand-border: #1f2d45;
+  --brand-text: #e8f0fe;
+  --brand-muted: #8b9dc3;
+  --brand-accent: #3b82f6;
+  --brand-accent-hover: #60a5fa;
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, "Noto Sans TC", sans-serif;
+  --canvas: #f7f9fc;
+  --panel: #ffffff;
+  --sidebar: #f0f4fa;
+  --ink: #23344c;
+  --muted: #62728d;
+  --line: #dbe3f0;
+  --hover: #eaf2ff;
+  --accent: #2563eb;
+  --shadow: 0 5px 22px #0a0e170d;
+}
+:root[data-theme="dark"] {
+  --canvas: #0e1522;
+  --panel: var(--brand-surface);
+  --sidebar: #101a2a;
+  --ink: var(--brand-text);
+  --muted: #a7b7d6;
+  --line: var(--brand-border);
+  --hover: var(--brand-elevated);
+  --accent: var(--brand-accent-hover);
+  --shadow: 0 5px 22px #0003;
+}

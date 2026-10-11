@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { clone, demoBoard, makeBoard, id, type Board } from "./model";
+import { clone, makeBoard, id, type Board } from "./model";
+import { welcomeBoard, refreshGreeting } from "./guide";
 import { History } from "./history";
 import { repository, exportProject, importProject } from "./storage";
 let initial:
@@ -7,11 +8,14 @@ let initial:
 async function initialize() {
   const boards = await repository.list();
   if (!boards.length) {
-    const b = demoBoard();
+    const b = welcomeBoard();
     await repository.save(b);
     boards.push(b);
   }
-  return { boards, active: await repository.active() };
+  const active = await repository.active();
+  const selected = boards.find((b) => b.boardId === active) || boards[0];
+  refreshGreeting(selected);
+  return { boards, active };
 }
 export function useWorkspace() {
   const [boards, setBoards] = useState<Board[]>([]),
@@ -162,10 +166,11 @@ export function useWorkspace() {
     }
   };
   const open = async (bid: string) => {
+    if (current.current?.boardId === bid) return;
     await flush();
     const b = all.current.find((b) => b.boardId === bid);
     if (b) {
-      sync(b);
+      sync(refreshGreeting(clone(b)));
       repository.active(bid).catch((e) => setError(String(e)));
     }
   };
@@ -191,6 +196,7 @@ export function useWorkspace() {
     await flush();
     const b = clone(all.current.find((b) => b.boardId === bid)!);
     b.boardId = id();
+    delete b.guide;
     b.name = b.name.slice(0, 180) + "（複本）";
     b.updatedAt = Date.now();
     sync(b);
@@ -248,6 +254,26 @@ export function useWorkspace() {
     }
   };
   return {
+    createGuide: async () => {
+      const existing = all.current.find((b) => b.guide);
+      if (existing) return open(existing.boardId);
+      await flush();
+      const b = welcomeBoard();
+      sync(b);
+      await persist(b);
+      await repository.active(b.boardId);
+    },
+    resetGuide: () =>
+      update((b) => {
+        const fresh = welcomeBoard();
+        Object.assign(b, {
+          nodes: fresh.nodes,
+          relations: fresh.relations,
+          guide: fresh.guide,
+          viewport: fresh.viewport,
+          treeStyle: fresh.treeStyle,
+        });
+      }),
     board,
     boards,
     status,
@@ -266,6 +292,8 @@ export function useWorkspace() {
     backup,
     restore,
     flush,
+    safeToReload: () =>
+      !failed.current.size && !pending.current && status !== "儲存失敗",
     canUndo: board
       ? (histories.current.get(board.boardId)?.past.length || 0) > 0
       : false,

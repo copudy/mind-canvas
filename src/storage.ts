@@ -168,7 +168,17 @@ export function validateBoard(raw: unknown): Board {
     return clone(v) as unknown as Relation;
   });
   // Reconstruct explicitly: imported documents cannot inject renderer properties.
+  const guide = raw.guide;
+  if (
+    guide !== undefined &&
+    (!object(guide) ||
+      guide.version !== 1 ||
+      !str(guide.greetingId, 100) ||
+      !nodes.some((n) => n.id === guide.greetingId && n.kind === "text"))
+  )
+    throw new Error("指南資訊無效");
   return {
+    ...(raw.guide ? { guide: clone(raw.guide) as Board["guide"] } : {}),
     schemaVersion: 1,
     boardId: raw.boardId,
     name: raw.name,
@@ -206,6 +216,8 @@ export function importProject(text: string): Board[] {
   return raw.boards.map((v) => {
     const b = validateBoard(v);
     b.boardId = id();
+    // 匯入是獨立副本；不作為官方指南入口，內容完整保留。
+    delete b.guide;
     b.name = `${b.name.slice(0, 180)}（匯入）`;
     b.updatedAt = Date.now();
     return b;

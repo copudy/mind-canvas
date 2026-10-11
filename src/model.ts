@@ -42,6 +42,7 @@ export interface Relation {
   waypoints?: Point[];
 }
 export interface Board {
+  guide?: { version: 1; greetingId: string };
   schemaVersion: 1;
   boardId: string;
   name: string;
@@ -88,7 +89,7 @@ export function makeItem(kind: Kind, position: Point, text = ""): Item {
         ? "transparent"
         : kind === "sticky"
           ? "#e7d99f"
-          : "#a3b8ae",
+          : "#c5d5ef",
     color: "#293b35",
     fontSize: 16,
     bold: false,
@@ -105,7 +106,7 @@ export function makeBoard(name = "未命名白板"): Board {
     updatedAt: Date.now(),
     nodes: [],
     relations: [],
-    treeStyle: { color: "#73968a", width: 2, dashed: false },
+    treeStyle: { color: "#3b82f6", width: 2, dashed: false },
     viewport: { x: 70, y: 80, zoom: 1 },
   };
 }

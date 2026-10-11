@@ -42,9 +42,13 @@ export default function Sidebar({
   return (
     <aside className="sidebar">
       <div className="brand">
-        <span className="brand-mark">m</span>
+        <img
+          className="brand-logo"
+          src={`${import.meta.env.BASE_URL}icon.svg`}
+          alt="PD-1 Center"
+        />
         <div>
-          mind canvas<small>自由式思維畫布</small>
+          PD-1 Center<small>Mind Canvas · 自由思維畫布</small>
         </div>
         <button aria-label="收合白板清單" onClick={onClose}>
           <PanelLeftClose size={18} />
@@ -162,6 +166,9 @@ export default function Sidebar({
           ))}
       </div>
       <div className="sidebar-footer">
+        <p className="storage-note">
+          資料只存於目前瀏覽器；清除網站資料、無痕模式或更換裝置可能遺失。共用瀏覽器設定檔會共用白板，請定期備份。
+        </p>
         <div className="local-note">
           <span className="status-dot" />
           <span>

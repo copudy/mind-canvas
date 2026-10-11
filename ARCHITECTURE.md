@@ -45,3 +45,13 @@
 完全包覆／重疊可能讓外框連線在幾何上無法完全避障，會顯示警告；不宣稱此時路由無碰撞。路由優先選短外框組合與可行路径，未做全圖交叉／共用線束最小化。Pinned 是排版位置固定，仍允許使用者主動拖曳。普通拖曳整枝改為 Free；Alt 必須在目標內部才掛載，防循環，歷史可復原。白板刪除需 UI 明確確認，無 Undo；物件刪除有 Undo。
 
 資料安全依賴瀏覽器 IndexedDB；無同步、無使用者帳號、無伺服器、無外部資料請求。不同 origin／port 的資料獨立，備份是移轉方式。Undo 僅本次執行記憶體，不持久化；目前不做 operation log、PNG/SVG/Markdown/OPML。
+
+## 2026-10-11 四項修改架構增量
+
+- 主品牌原 SVG 與來源 SHA 見 REFINEMENT_REPORT.md，design-tokens.css 集中管理品牌及獨立淺／深工作區色彩。沒有加入第二個畫布框架。
+- ToolLibrary 僅重組既有功能入口、加入由節點／連線組成的小範本；六分類及收合偏好獨立於文件。
+- Board 新增可選 guide { version:1, greetingId }。舊 schemaVersion1 仍可讀，不改 DB 版本；嚴格驗證 greetingId 為現有文字節點。複製／匯入保留物件內容，但不複製官方指南入口標記。
+- guide.ts 建立官方互動文件；僅無白板才初始化，有資料不自動新增。開啟指南在其文字節點抽換問候，沒有全站問候元件。重設是可復原文件命令，UI 先確認。
+- persistence.ts 封裝 persisted／persist 能力與失敗處理。使用者點擊時要求，拒絕不阻斷正常 IndexedDB 寫入。
+- SW skipWaiting + clientsClaim 接管新版快取；已開頁面顯示載入新版入口，先 flush 再檢查失敗／待儲存狀態，避免強制重載未保存文件。首次接管不提示更新。
+- 畫布視角事件檢查 boardId，避免已離開白板的視角事件寫入當前白板。

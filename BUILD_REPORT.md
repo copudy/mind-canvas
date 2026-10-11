@@ -102,3 +102,7 @@ GitHub Pages 準備：相對 base／assets、manifest scope、SW path、子目�
 依 ACCEPTANCE.md 操作 16 項清單。優先試多棵心智圖、明確重掛／Undo、兩張白板切換刷新、可釘選計算機完整流程、JSON 還原與離線。
 
 本次停在驗收。收到修改意見後修正、重測並重新交付。只有使用者明確表示「原型驗收通過」且「授權正式上線」，才確認擁有者／repository 名稱／公開設定、重新認證、push／Actions／GitHub Pages 並交付正式站。
+
+## 更新交付
+
+第一次建置報告為 0.1 原型紀錄；本次品牌／工具庫／儲存檢核／首次指南修改以 REFINEMENT_REPORT.md 與最新 TEST_REPORT.md 為準。未推送或正式部署，等待使用者再次驗收。

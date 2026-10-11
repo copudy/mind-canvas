@@ -37,15 +37,15 @@ export default defineConfig({
       injectRegister: null,
       includeAssets: ["icon.svg", "icon-192.png", "icon-512.png"],
       manifest: {
-        name: "Freeform Mind Canvas",
+        name: "PD-1 Center | Mind Canvas",
         short_name: "Mind Canvas",
         description: "自由式個人思考工作台",
         lang: "zh-Hant",
         start_url: "./",
         scope: "./",
         display: "standalone",
-        theme_color: "#437e70",
-        background_color: "#f8f9f6",
+        theme_color: "#111827",
+        background_color: "#f7f9fc",
         icons: [
           { src: "icon-192.png", sizes: "192x192", type: "image/png" },
           { src: "icon-512.png", sizes: "512x512", type: "image/png" },
@@ -59,6 +59,7 @@ export default defineConfig({
       },
       workbox: {
         clientsClaim: true,
+        skipWaiting: true,
         globPatterns: ["**/*.{js,css,html,svg,png,woff2,txt}"],
         navigateFallback: "index.html",
       },

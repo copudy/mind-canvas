@@ -18,16 +18,12 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import {
-  MousePointer2,
-  Hand,
   Type,
   StickyNote,
   Square,
   Circle,
   GitBranch,
   Calculator as CalcIcon,
-  Undo2,
-  Redo2,
   Sun,
   Moon,
   PanelLeftOpen,
@@ -35,7 +31,6 @@ import {
   Upload,
   Search,
   HelpCircle,
-  Link2,
   X,
   Plus,
   LocateFixed,
@@ -56,6 +51,8 @@ import {
   DeleteBoardDialog,
 } from "./components/WorkbenchDialogs";
 import Inspector from "./components/Inspector";
+import ToolLibrary from "./components/ToolLibrary";
+import { requestPersistence } from "./persistence";
 import { useWorkspace } from "./useWorkspace";
 import {
   makeItem,
@@ -99,7 +96,7 @@ function Workbench() {
     [selectedEdge, setSelectedEdge] = useState<string | null>(null),
     [editId, setEdit] = useState<string | null>(null),
     [sidebar, setSidebar] = useState(true),
-    [pan, setPan] = useState(false),
+    [resetGuide, setResetGuide] = useState(false),
     [dark, setDark] = useState(() => {
       try {
         return localStorage.getItem("mind-theme") === "dark";
@@ -117,7 +114,8 @@ function Workbench() {
     [deleteBoard, setDeleteBoard] = useState<string | null>(null),
     [notice, setNotice] = useState(""),
     [inspector, setInspector] = useState(true),
-    [online, setOnline] = useState(navigator.onLine);
+    [online, setOnline] = useState(navigator.onLine),
+    [updateAvailable, setUpdateAvailable] = useState(false);
   const drag = useRef<DragState | null>(null),
     copyBuffer = useRef<Board | null>(null),
     importInput = useRef<HTMLInputElement>(null),
@@ -138,13 +136,42 @@ function Workbench() {
     };
   }, []);
   useEffect(() => {
+    if (!("serviceWorker" in navigator)) return;
+    let hadController = !!navigator.serviceWorker.controller;
+    const changed = () => {
+      if (hadController) setUpdateAvailable(true);
+      hadController = true;
+    };
+    navigator.serviceWorker.addEventListener("controllerchange", changed);
+    return () =>
+      navigator.serviceWorker.removeEventListener("controllerchange", changed);
+  }, []);
+  useEffect(() => {
     setSelected([]);
     setSelectedEdge(null);
     setEdit(null);
     setConnectSource(null);
     setMount(null);
     setGuide({});
-    if (ws.board) void rf.setViewport(ws.board.viewport);
+    if (ws.board) {
+      void rf.setViewport(ws.board.viewport);
+      if (ws.board.guide && ws.board.viewport.zoom === 0.55) {
+        const timer = setTimeout(
+          () =>
+            void rf.fitView({
+              padding: {
+                top: "35px",
+                bottom: "180px",
+                left: "35px",
+                right: "35px",
+              },
+              duration: 0,
+            }),
+          200,
+        );
+        return () => clearTimeout(timer);
+      }
+    }
   }, [boardId]);
   useEffect(() => {
     if (!notice) return;
@@ -182,12 +209,64 @@ function Workbench() {
   };
   const add = (kind: Kind, text?: string, pos?: Point) => {
     const n = makeItem(kind, pos || center(), text);
+    if (kind === "text" && text === "新的標題") {
+      n.bold = true;
+      n.fontSize = 26;
+      n.maxWidth = 480;
+    }
     autosize(n);
     ws.update((b) => b.nodes.push(n));
     setSelected([n.id]);
     setSelectedEdge(null);
     if (kind !== "calculator") setEdit(n.id);
     return n.id;
+  };
+  const addTemplate = (type: "mind" | "flow") => {
+    const p = center();
+    const root = makeItem(
+      type === "mind" ? "mind" : "rectangle",
+      p,
+      type === "mind" ? "我的主題" : "開始",
+    );
+    root.bold = true;
+    const parts =
+      type === "mind" ? ["第一個想法", "第二個想法"] : ["下一步", "完成"];
+    const ns = parts.map((text, i) => {
+      const n = makeItem(
+        type === "mind" ? "mind" : "rectangle",
+        {
+          x: p.x + (type === "mind" ? 250 : (i + 1) * 240),
+          y: p.y + (type === "mind" ? i * 100 : 0),
+        },
+        text,
+      );
+      if (type === "mind") {
+        n.parentId = root.id;
+        n.order = i;
+        n.mode = "Auto";
+      }
+      return n;
+    });
+    ws.update((b) => {
+      b.nodes.push(root, ...ns);
+      if (type === "flow")
+        [root, ...ns].slice(0, 2).forEach((n, i) =>
+          b.relations.push({
+            id: id(),
+            source: n.id,
+            target: ns[i].id,
+            color: "#3b82f6",
+            width: 2,
+            dashed: false,
+          }),
+        );
+    });
+    setSelected([root.id]);
+    void rf.fitView({
+      nodes: [root, ...ns].map((n) => ({ id: n.id })),
+      padding: 0.35,
+      duration: 200,
+    });
   };
   const insertResult = (text: string, pos?: Point) => add("text", text, pos);
   const toggle = (nid: string) =>
@@ -331,7 +410,7 @@ function Workbench() {
           id: id(),
           source,
           target,
-          color: "#83978e",
+          color: "#3b82f6",
           width: 2,
           dashed: false,
           sourceSide: (c?.sourceHandle as Relation["sourceSide"]) || undefined,
@@ -528,7 +607,8 @@ function Workbench() {
         e.isComposing ||
         help ||
         command ||
-        deleteBoard
+        deleteBoard ||
+        resetGuide
       )
         return;
       const ctrl = e.ctrlKey || e.metaKey;
@@ -615,6 +695,28 @@ function Workbench() {
   const fileImport = () => importInput.current?.click();
   if (!ws.board) return <div className="loading">正在打開你的思考空間…</div>;
   const board = ws.board;
+  const viewport = rf.getViewport();
+  const surface = document.querySelector(".canvas-surface");
+  const contextPosition = selectedItem
+    ? {
+        left: Math.max(
+          12,
+          Math.min(
+            (surface?.clientWidth || 900) - 530,
+            selectedItem.position.x * viewport.zoom + viewport.x,
+          ),
+        ),
+        top: Math.max(
+          12,
+          Math.min(
+            (surface?.clientHeight || 700) - 170,
+            selectedItem.position.y * viewport.zoom + viewport.y - 48,
+          ),
+        ),
+        bottom: "auto",
+        transform: "none",
+      }
+    : undefined;
   const commands = [
     ...tools.map((t) => ({ label: `新增${t.label}`, run: () => add(t.kind) })),
     { label: "釘選計算機", run: () => add("calculator") },
@@ -639,6 +741,39 @@ function Workbench() {
         notify,
       }}
     >
+      {resetGuide && (
+        <div className="modal-backdrop">
+          <div className="modal" role="dialog" aria-label="確認重設指南">
+            <h2>重設這張指南？</h2>
+            <p>
+              指南中的修改會被替換；其他白板保持原樣。重設後可用 Ctrl＋Z 復原。
+            </p>
+            <div className="modal-actions">
+              <button onClick={() => setResetGuide(false)}>取消</button>
+              <button
+                onClick={() => {
+                  ws.resetGuide();
+                  setResetGuide(false);
+                  setTimeout(
+                    () =>
+                      void rf.fitView({
+                        padding: {
+                          top: "35px",
+                          bottom: "180px",
+                          left: "35px",
+                          right: "35px",
+                        },
+                      }),
+                    100,
+                  );
+                }}
+              >
+                確認重設
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className={`workbench ${sidebar ? "with-sidebar" : ""}`}>
         {sidebar && (
           <Sidebar
@@ -665,10 +800,29 @@ function Workbench() {
                   <PanelLeftOpen size={19} />
                 </button>
               )}
-              <span className="breadcrumb">我的白板 /</span>
+              <div className="header-brand">
+                <img
+                  src={`${import.meta.env.BASE_URL}icon.svg`}
+                  alt="PD-1 Center Logo"
+                />
+                <strong>PD-1 Center | Mind Canvas</strong>
+              </div>
               <h1>{board.name}</h1>
             </div>
             <div className="top-actions">
+              {updateAvailable && (
+                <button
+                  aria-label="載入新版"
+                  onClick={() =>
+                    void ws.flush().then(() => {
+                      if (ws.safeToReload()) location.reload();
+                      else notify("請先匯出備份，儲存失敗時不自動重新載入。");
+                    })
+                  }
+                >
+                  載入新版
+                </button>
+              )}
               <span className={`save-status ${ws.error ? "failed" : ""}`}>
                 <span className="status-dot" />
                 {online ? ws.status : "離線 · " + ws.status}
@@ -703,6 +857,28 @@ function Workbench() {
                 onClick={() => setDark(!dark)}
               >
                 {dark ? <Sun size={18} /> : <Moon size={18} />}
+              </button>
+              <button
+                aria-label="開啟歡迎指南"
+                title="開啟歡迎指南"
+                onClick={() => void ws.createGuide()}
+              >
+                指南
+              </button>
+              {board.guide && (
+                <button
+                  aria-label="重設指南"
+                  onClick={() => setResetGuide(true)}
+                >
+                  重設
+                </button>
+              )}
+              <button
+                aria-label="保留本機儲存"
+                title="要求瀏覽器保留儲存（仍須備份）"
+                onClick={() => void requestPersistence().then(notify)}
+              >
+                <Pin size={17} />
               </button>
               <button aria-label="操作說明" onClick={() => setHelp(true)}>
                 <HelpCircle size={18} />
@@ -753,6 +929,7 @@ function Workbench() {
                 if (ns[0]) stopDrag(e.nativeEvent, ns[0], ns);
               }}
               onMoveEnd={(_, v) => {
+                if (ws.current.current?.boardId !== board.boardId) return;
                 const old = ws.current.current?.viewport;
                 if (old && JSON.stringify(old) !== JSON.stringify(v))
                   ws.update((b) => {
@@ -762,12 +939,12 @@ function Workbench() {
               defaultViewport={board.viewport}
               minZoom={0.1}
               maxZoom={3}
-              panOnDrag={pan ? [0, 1, 2] : [1, 2]}
-              selectionOnDrag={!pan}
+              panOnDrag={[1, 2]}
+              selectionOnDrag
               selectionMode={SelectionMode.Partial}
               multiSelectionKeyCode="Shift"
               selectionKeyCode={null}
-              panActivationKeyCode={null}
+              panActivationKeyCode="Space"
               zoomOnScroll={false}
               panOnScroll
               zoomOnPinch
@@ -781,17 +958,17 @@ function Workbench() {
                 variant={BackgroundVariant.Dots}
                 gap={24}
                 size={1}
-                color={dark ? "#35443f" : "#d5ddd5"}
+                color={dark ? "#26344d" : "#d6dfef"}
               />
               <MiniMap
                 pannable
                 zoomable
                 nodeColor={(n) =>
                   (n.data as FlowNode["data"]).item.background === "transparent"
-                    ? "#9bad9f"
+                    ? "#8b9dc3"
                     : (n.data as FlowNode["data"]).item.background
                 }
-                maskColor={dark ? "rgba(24,34,29,.6)" : "rgba(245,247,243,.65)"}
+                maskColor={dark ? "rgba(10,14,23,.6)" : "rgba(247,249,252,.65)"}
               />
               <Controls showInteractive={false} />
               {(guide.gx !== undefined || guide.gy !== undefined) && (
@@ -815,77 +992,24 @@ function Workbench() {
                 </svg>
               )}
             </ReactFlow>
-            <div
-              className="canvas-toolbar"
-              role="toolbar"
-              aria-label="畫布工具"
-            >
-              <button
-                className={!pan ? "tool-active" : ""}
-                aria-label="選取工具"
-                title="選取 · 空白處拖曳框選"
-                onClick={() => setPan(false)}
-              >
-                <MousePointer2 size={19} />
-              </button>
-              <button
-                className={pan ? "tool-active" : ""}
-                aria-label="平移工具"
-                title="平移畫布"
-                onClick={() => setPan(true)}
-              >
-                <Hand size={19} />
-              </button>
-              <span className="divider" />
-              {tools.map((t) => (
-                <button
-                  key={t.kind}
-                  aria-label={`新增${t.label}`}
-                  title={`新增${t.label}`}
-                  onClick={() => add(t.kind)}
-                >
-                  <t.icon size={19} />
-                </button>
-              ))}
-              <button
-                aria-label="釘選計算機"
-                title="新增画布計算機"
-                onClick={() => add("calculator")}
-              >
-                <CalcIcon size={19} />
-                <span className="tiny-plus">+</span>
-              </button>
-              <span className="divider" />
-              <button
-                disabled={!selected.length}
-                className={connectSource ? "tool-active" : ""}
-                aria-label="建立關聯線"
-                title="選取起點，再點選此工具與終點"
-                onClick={() => {
-                  setConnectSource(selected[0]);
-                  notify("請點選目標物件，建立自由關聯線");
-                }}
-              >
-                <Link2 size={19} />
-              </button>
-              <span className="divider" />
-              <button
-                aria-label="復原"
-                title="復原 Ctrl Z"
-                disabled={!ws.canUndo}
-                onClick={ws.undo}
-              >
-                <Undo2 size={19} />
-              </button>
-              <button
-                aria-label="重作"
-                title="重作 Ctrl Shift Z"
-                disabled={!ws.canRedo}
-                onClick={ws.redo}
-              >
-                <Redo2 size={19} />
-              </button>
-            </div>
+            <ToolLibrary
+              add={add}
+              template={addTemplate}
+              connect={() => {
+                setConnectSource(selected[0]);
+                notify("請點選目標物件，建立自由關聯線");
+              }}
+              selected={selected.length}
+              align={align}
+              arrange={() => arrange(selectedItem?.layout || "right")}
+              floating={() =>
+                setFloating(floating || makeItem("calculator", { x: 0, y: 0 }))
+              }
+              undo={ws.undo}
+              redo={ws.redo}
+              canUndo={ws.canUndo}
+              canRedo={ws.canRedo}
+            />
             {visible.length === 0 && (
               <div className="canvas-heading">
                 <span>THINK WITHOUT BOUNDARIES</span>
@@ -899,30 +1023,50 @@ function Workbench() {
               <span className="hint">
                 拖曳框選 · Shift 多選 · 滾動平移 · Ctrl＋滾輪縮放
               </span>
-              <button
-                onClick={() =>
-                  setFloating(
-                    floating || makeItem("calculator", { x: 0, y: 0 }),
-                  )
-                }
-              >
-                <CalcIcon size={15} />
-                浮動計算機
-              </button>
             </div>
             {blocked > 0 && (
               <div className="route-warning" role="status">
                 {blocked} 條連線暫停顯示：端點受遮擋，請分開重疊物件。
               </div>
             )}
-            {selectedItem?.kind === "mind" && (
-              <div className="layout-bar">
+            {selectedItem && !editId && (
+              <div className="layout-bar context-tools" style={contextPosition}>
+                <button
+                  aria-label="編輯選取物件"
+                  onClick={() => {
+                    if (selectedItem.kind === "calculator")
+                      document
+                        .querySelector<HTMLInputElement>(
+                          `[data-id="${selectedItem.id}"] input`,
+                        )
+                        ?.focus();
+                    else setEdit(selectedItem.id);
+                  }}
+                >
+                  編輯
+                </button>
+                <button aria-label="複製選取物件" onClick={duplicate}>
+                  複製
+                </button>
+                <button aria-label="刪除選取物件" onClick={remove}>
+                  刪除
+                </button>
+                <button
+                  aria-label="連接選取物件"
+                  onClick={() => {
+                    setConnectSource(selected[0]);
+                    notify("請點選目標物件");
+                  }}
+                >
+                  連線
+                </button>
                 <span>局部整理</span>
-                {(["right", "split", "radial"] as LayoutMode[]).map((m, i) => (
-                  <button key={m} onClick={() => arrange(m)}>
-                    {["向右", "左右", "放射"][i]}
-                  </button>
-                ))}
+                {selectedItem.kind === "mind" &&
+                  (["right", "split", "radial"] as LayoutMode[]).map((m, i) => (
+                    <button key={m} onClick={() => arrange(m)}>
+                      {["向右", "左右", "放射"][i]}
+                    </button>
+                  ))}
                 <button
                   aria-label="定位選取節點"
                   title="定位選取"

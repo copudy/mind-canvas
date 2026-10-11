@@ -1,30 +1,12 @@
 :root {
-  font-family: Inter, "Segoe UI", "Noto Sans TC", sans-serif;
-  color: #34433c;
-  background: #f8f9f6;
+  font-family: var(--font-sans);
+  color: var(--ink);
+  background: var(--canvas);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
-  --canvas: #f8f9f6;
-  --panel: #fff;
-  --sidebar: #f0f3ed;
-  --ink: #34433c;
-  --muted: #89948b;
-  --line: #e3e8df;
-  --hover: #e8eee6;
-  --accent: #437e70;
-  --shadow: 0 5px 22px #2238290c;
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --canvas: #19241f;
-  --panel: #25322c;
-  --sidebar: #1f2b25;
-  --ink: #d8e3dc;
-  --muted: #94a49a;
-  --line: #36463d;
-  --hover: #34453b;
-  --accent: #86bdab;
-  --shadow: 0 5px 22px #0003;
   color: var(--ink);
   background: var(--canvas);
 }
@@ -1192,4 +1174,300 @@ kbd {
     transition: none !important;
     animation: none !important;
   }
+}
+
+/* 品牌與工作區 token 分離；工具庫不佔用主視覺。 */
+.brand-logo {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+}
+.brand {
+  font-size: 15px;
+  letter-spacing: -0.2px;
+}
+.brand small {
+  font-size: 9px;
+  letter-spacing: 0.2px;
+}
+.header-brand {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.header-brand img {
+  width: 26px;
+  height: 26px;
+}
+.board-title {
+  gap: 14px;
+  min-width: 0;
+}
+.board-title h1 {
+  font-size: 12px;
+  color: var(--muted);
+}
+.storage-note {
+  font-size: 10px;
+  line-height: 1.7;
+  color: var(--muted);
+  margin: 8px 0 12px;
+}
+.tool-library {
+  position: absolute;
+  z-index: 9;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(740px, calc(100% - 370px));
+  min-width: 360px;
+  height: 120px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.tool-library.collapsed {
+  height: 34px;
+}
+.library-top {
+  display: flex;
+  height: 34px;
+  border-bottom: 1px solid var(--line);
+  align-items: center;
+}
+.library-top [role="tablist"] {
+  display: flex;
+  flex: 1;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.library-top [role="tab"] {
+  padding: 7px 12px;
+  flex-shrink: 0;
+  font-size: 11px;
+  border-radius: 0;
+  color: var(--muted);
+}
+.library-top [aria-selected="true"] {
+  color: var(--accent);
+  background: var(--hover);
+  box-shadow: inset 0 -2px var(--accent);
+}
+.library-toggle {
+  margin-left: auto;
+  flex-shrink: 0;
+  width: 32px;
+}
+.library-top > span {
+  padding-left: 12px;
+  font-size: 11px;
+}
+.library-tools {
+  display: flex;
+  gap: 4px;
+  height: 84px;
+  padding: 8px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.library-tools button {
+  width: 76px;
+  min-width: 76px;
+  height: 62px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  justify-content: center;
+  align-items: center;
+  padding: 4px;
+  color: var(--ink);
+  font-size: 10px;
+  border-radius: 6px;
+}
+.library-tools button:hover:not(:disabled) {
+  color: var(--accent);
+  background: var(--hover);
+}
+.library-history {
+  display: flex;
+  margin-left: auto;
+  border-left: 1px solid var(--line);
+  padding-left: 4px;
+}
+.canvas-bottom {
+  bottom: 7px;
+}
+.context-tools {
+  max-width: calc(100% - 24px);
+  overflow-x: auto;
+}
+.context-tools > span {
+  display: none;
+}
+.react-flow__node.selected .canvas-item {
+  box-shadow: 0 0 0 2px var(--brand-accent);
+}
+.topbar {
+  background: var(--panel);
+}
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--brand-accent);
+  outline-offset: 2px;
+}
+@media (max-width: 1050px) {
+  .header-brand strong {
+    max-width: 185px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 11px;
+  }
+  .board-title h1 {
+    display: none;
+  }
+  .tool-library {
+    width: calc(100% - 260px);
+    min-width: 340px;
+  }
+}
+@media (max-width: 760px) {
+  .tool-library {
+    width: calc(100% - 20px);
+    min-width: 0;
+    bottom: 38px;
+  }
+  .library-top [role="tab"] {
+    padding: 7px 10px;
+  }
+  .react-flow__minimap {
+    bottom: 165px;
+    margin-bottom: 0;
+  }
+  .react-flow__controls {
+    bottom: 175px;
+  }
+  .header-brand strong {
+    max-width: 105px;
+    font-size: 10px;
+  }
+  .top-actions button {
+    font-size: 10px;
+  }
+  .context-tools {
+    max-width: calc(100% - 24px);
+  }
+}
+
+/* 使用品牌色統一互動；保留使用者既有物件配色。 */
+:root {
+  color: var(--ink);
+  background: var(--canvas);
+}
+.board-row.active,
+[data-theme="dark"] .board-row.active {
+  background: var(--hover);
+}
+.board-row.active strong,
+[data-theme="dark"] .board-row.active strong {
+  color: var(--accent);
+}
+.new-board {
+  border-color: var(--line);
+}
+.canvas-item.is-selected {
+  outline-color: var(--brand-accent);
+}
+.node-port {
+  background: var(--brand-accent);
+}
+.mount-preview {
+  outline-color: var(--brand-accent);
+}
+.snap-guides line {
+  stroke: var(--brand-accent);
+}
+.calculator.canvas-item,
+.floating-calculator {
+  background: var(--panel) !important;
+  color: var(--ink) !important;
+  border-color: var(--line) !important;
+}
+.calculator input,
+.calculator output,
+.calc-drag,
+.floating-title {
+  color: var(--ink);
+  border-color: var(--line);
+}
+.calculator input,
+.calc-keys button {
+  background: var(--canvas);
+  color: var(--ink);
+  border-color: var(--line);
+}
+.calc-keys button:nth-child(4n),
+.calc-keys button:hover {
+  background: var(--hover);
+}
+.calc-bottom button {
+  color: var(--accent);
+  border-color: var(--line);
+}
+.calc-bottom .equals {
+  color: white;
+  background: var(--brand-accent);
+}
+.calculator small,
+.calc-toolbar,
+.calc-input-label {
+  color: var(--muted);
+}
+@media (max-width: 760px) {
+  .react-flow__minimap {
+    bottom: 170px !important;
+  }
+  .react-flow__controls {
+    bottom: 175px !important;
+  }
+}
+.react-flow__minimap {
+  overflow: hidden;
+}
+.react-flow__minimap svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+@media (max-width: 760px) {
+  .topbar {
+    height: 92px;
+    min-height: 92px;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+    gap: 5px;
+  }
+  .header-brand strong {
+    max-width: none;
+    font-size: 11px;
+  }
+  .header-brand img {
+    width: 24px;
+    height: 24px;
+  }
+  .top-actions {
+    justify-content: flex-end;
+  }
+  .top-actions button {
+    white-space: nowrap;
+  }
+}
+.react-flow {
+  --xy-background-color: var(--canvas);
+  --xy-minimap-background-color: var(--panel);
 }

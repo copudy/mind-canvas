@@ -66,3 +66,7 @@ jobs:
 版本依據（2026-10-11 官方資料，A）：[GitHub Pages custom workflows](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages)、[setup-node](https://github.com/actions/setup-node)。
 
 部署更新後，舊頁面可能待所有舊分頁關閉才啟用新的離線快取；更新前先備份。正式網址與本機 origin 的資料不同，需 JSON 移轉。
+
+### 儲存隔離補充
+
+正式GitHub Pages與127.0.0.1、5173、4173的origin不同，需JSON移轉。IndexedDB不是帳號隔離或加密；同一瀏覽器profile會共用白板，同一GitHub owner的其他Pages子路徑在同origin，路徑本身不提供安全隔離。一般公開Pages不需登入，私有repo也不等於私人網站。正式實測仍待授權。
