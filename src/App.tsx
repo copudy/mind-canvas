@@ -1,3 +1,4 @@
+import GuidePage from "./components/GuidePage";
 import { useEffect, useRef, useState } from "react";
 import {
   ReactFlow,
@@ -166,39 +167,7 @@ function Workbench() {
     setConnectSource(null);
     setMount(null);
     setGuide({});
-    if (ws.board) {
-      void rf.setViewport(ws.board.viewport);
-      if (ws.board.guide) {
-        const entry = ws.board.nodes.find(
-          (n) => n.id === ws.board!.guide!.entryId,
-        );
-        const timer = setTimeout(() => {
-          const area = document
-            .querySelector(".canvas-surface")
-            ?.getBoundingClientRect();
-          if (area && entry) {
-            const reserved = window.innerHeight < 700 ? 90 : 160;
-            const zoom = Math.min(
-              1,
-              (area.width - 32) / entry.width,
-              (area.height - reserved - 24) / (entry.position.y + entry.height),
-            );
-            const left = window.innerWidth > 760 && sidebar ? 308 : 16;
-            void rf.setViewport({ x: left, y: 24, zoom }).then(() => {
-              if (ws.current.current?.boardId === boardId)
-                ws.update(
-                  (b) => {
-                    b.viewport = { x: left, y: 24, zoom };
-                  },
-                  false,
-                  false,
-                );
-            });
-          }
-        }, 200);
-        return () => clearTimeout(timer);
-      }
-    }
+    if (ws.board && !ws.board.guide) void rf.setViewport(ws.board.viewport);
   }, [boardId]);
   useEffect(() => {
     if (!notice) return;
@@ -222,8 +191,7 @@ function Workbench() {
       item ? record : false,
     );
   const openCalculator = () => {
-    if (ws.current.current?.guide)
-      return notify("請先建立練習副本或新的白板。");
+    if (ws.current.current?.guide) return notify("請先建立新的白板。");
     const found =
       ws.current.current?.nodes.find((n) => n.floating) ||
       ws.current.current?.nodes.find(
@@ -233,8 +201,7 @@ function Workbench() {
     setFloating(found || makeItem("calculator", center()));
   };
   const insertTemplate = (t: CanvasTemplate) => {
-    if (ws.current.current?.guide)
-      return notify("請先建立可編輯副本或新的白板。");
+    if (ws.current.current?.guide) return notify("請先建立新的白板。");
     const p = center(),
       existing = ws.current.current?.nodes.filter((n) => !n.floating) || [];
     const collision = t.document.nodes.some((n) =>
@@ -299,7 +266,7 @@ function Workbench() {
   };
   const add = (kind: Kind, text?: string, pos?: Point) => {
     if (ws.current.current?.guide) {
-      notify("官方指南受保護，請建立練習副本。");
+      notify("請建立自己的白板開始操作。");
       return "";
     }
     const n = makeItem(kind, pos || center(), text);
@@ -862,7 +829,7 @@ function Workbench() {
     <CanvasContext.Provider
       value={{
         readOnly: !!board.guide,
-        practice: () => void ws.duplicate(board.boardId),
+        practice: () => void ws.add(),
         editId,
         setEdit: (nid) => {
           if (!board.guide) setEdit(nid);
@@ -1078,17 +1045,6 @@ function Workbench() {
                     >
                       操作說明
                     </button>
-                    {board.guide && (
-                      <button
-                        role="menuitem"
-                        onClick={() => {
-                          setHelpMenu(false);
-                          void ws.duplicate(board.boardId);
-                        }}
-                      >
-                        建立可編輯副本
-                      </button>
-                    )}
                   </div>
                 )}
               </div>
@@ -1099,175 +1055,141 @@ function Workbench() {
             tabIndex={-1}
             aria-label="自由思維畫布"
           >
-            <ReactFlow<FlowNode, FlowEdge>
-              key={board.boardId}
-              nodes={nodes}
-              nodesDraggable={!board.guide}
-              nodesConnectable={!board.guide}
-              elementsSelectable={!board.guide}
-              edges={edges}
-              nodeTypes={nodeTypes}
-              edgeTypes={edgeTypes}
-              onNodesChange={changes}
-              onEdgesChange={edgeChanges}
-              onNodeClick={nodeClick}
-              onEdgeClick={(_, e) => {
-                if (!e.data?.tree) {
-                  setSelectedEdge(e.id);
-                  setSelected([]);
-                }
-              }}
-              onPaneClick={() => {
-                setSelected([]);
-                setSelectedEdge(null);
-                setEdit(null);
-                setConnectSource(null);
-                document.querySelector<HTMLElement>(".canvas-surface")?.focus();
-              }}
-              onConnect={(c) => addRelation(c.source, c.target, c)}
-              connectionMode={ConnectionMode.Loose}
-              connectionLineType={ConnectionLineType.SmoothStep}
-              isValidConnection={(c) => c.source !== c.target}
-              onNodeDragStart={startDrag}
-              onNodeDrag={moveDrag}
-              onNodeDragStop={stopDrag}
-              onSelectionDragStart={(e, ns) => {
-                if (ns[0]) startDrag(e.nativeEvent, ns[0], ns);
-              }}
-              onSelectionDrag={(e, ns) => {
-                if (ns[0]) moveDrag(e.nativeEvent, ns[0], ns);
-              }}
-              onSelectionDragStop={(e, ns) => {
-                if (ns[0]) stopDrag(e.nativeEvent, ns[0], ns);
-              }}
-              onMoveEnd={(_, v) => {
-                if (ws.current.current?.boardId !== board.boardId) return;
-                const old = ws.current.current?.viewport;
-                if (old && JSON.stringify(old) !== JSON.stringify(v))
-                  ws.update(
-                    (b) => {
-                      b.viewport = v;
-                    },
-                    false,
-                    false,
-                  );
-              }}
-              defaultViewport={board.viewport}
-              minZoom={0.1}
-              maxZoom={3}
-              panOnDrag={[1, 2]}
-              selectionOnDrag
-              selectionMode={SelectionMode.Partial}
-              multiSelectionKeyCode="Shift"
-              selectionKeyCode={null}
-              panActivationKeyCode="Space"
-              zoomOnScroll={false}
-              panOnScroll
-              zoomOnPinch
-              zoomActivationKeyCode="Control"
-              deleteKeyCode={null}
-              disableKeyboardA11y
-              autoPanOnNodeDrag
-              colorMode={dark ? "dark" : "light"}
-            >
-              <Background
-                variant={BackgroundVariant.Dots}
-                gap={24}
-                size={1}
-                color={dark ? "#26344d" : "#d6dfef"}
-              />
-              <MiniMap
-                pannable
-                zoomable
-                nodeColor={(n) =>
-                  (n.data as FlowNode["data"]).item.background === "transparent"
-                    ? "#8b9dc3"
-                    : (n.data as FlowNode["data"]).item.background
-                }
-                maskColor={dark ? "rgba(10,14,23,.6)" : "rgba(247,249,252,.65)"}
-              />
-              <Controls showInteractive={false} showFitView={false}>
-                <ControlButton
-                  aria-label="Fit View"
-                  title="適應畫面"
-                  onClick={() => focusItems(visible)}
-                >
-                  <Maximize2 size={16} />
-                </ControlButton>
-              </Controls>
-              {(guide.gx !== undefined || guide.gy !== undefined) && (
-                <svg className="guide-svg">
-                  {guide.gx !== undefined && (
-                    <line
-                      x1={guide.gx * rf.getZoom() + rf.getViewport().x}
-                      x2={guide.gx * rf.getZoom() + rf.getViewport().x}
-                      y1="0"
-                      y2="100%"
-                    />
-                  )}
-                  {guide.gy !== undefined && (
-                    <line
-                      y1={guide.gy * rf.getZoom() + rf.getViewport().y}
-                      y2={guide.gy * rf.getZoom() + rf.getViewport().y}
-                      x1="0"
-                      x2="100%"
-                    />
-                  )}
-                </svg>
-              )}
-            </ReactFlow>
             {board.guide ? (
-              <div className="guide-learning-bar">
-                <span>官方指南 · 原稿受保護</span>
-                <button onClick={() => void ws.duplicate(board.boardId)}>
-                  建立可編輯副本
-                </button>
-                <label>
-                  閱讀章節
-                  <select
-                    aria-label="閱讀指南章節"
-                    defaultValue=""
-                    onChange={(e) => {
-                      const n = board.nodes.find(
-                        (n) => n.id === e.target.value,
-                      );
-                      if (n) {
-                        const z = Math.min(
-                          1,
-                          (document.querySelector(".canvas-surface")!
-                            .clientWidth -
-                            32) /
-                            320,
-                        );
-                        const next = {
-                          x: window.innerWidth > 760 && sidebar ? 308 : 16,
-                          y: 24 - n.position.y * z,
-                          zoom: z,
-                        };
-                        void rf.setViewport(next).then(() =>
-                          ws.update(
-                            (b) => {
-                              b.viewport = next;
-                            },
-                            false,
-                            false,
-                          ),
-                        );
-                      }
-                    }}
-                  >
-                    <option value="">選擇章節</option>
-                    {board.nodes
-                      .filter((n) => /^0[1-6] /.test(n.text))
-                      .map((n) => (
-                        <option key={n.id} value={n.id}>
-                          {n.text}
-                        </option>
-                      ))}
-                  </select>
-                </label>
-              </div>
+              <GuidePage
+                board={board}
+                lastBoard={ws.lastBoard?.name}
+                resume={() =>
+                  ws.lastBoard && void ws.open(ws.lastBoard.boardId)
+                }
+                create={() => void ws.add()}
+                backup={() => setSettings(true)}
+              />
             ) : (
+              <ReactFlow<FlowNode, FlowEdge>
+                key={board.boardId}
+                nodes={nodes}
+                nodesDraggable={!board.guide}
+                nodesConnectable={!board.guide}
+                elementsSelectable={!board.guide}
+                edges={edges}
+                nodeTypes={nodeTypes}
+                edgeTypes={edgeTypes}
+                onNodesChange={changes}
+                onEdgesChange={edgeChanges}
+                onNodeClick={nodeClick}
+                onEdgeClick={(_, e) => {
+                  if (!e.data?.tree) {
+                    setSelectedEdge(e.id);
+                    setSelected([]);
+                  }
+                }}
+                onPaneClick={() => {
+                  setSelected([]);
+                  setSelectedEdge(null);
+                  setEdit(null);
+                  setConnectSource(null);
+                  document
+                    .querySelector<HTMLElement>(".canvas-surface")
+                    ?.focus();
+                }}
+                onConnect={(c) => addRelation(c.source, c.target, c)}
+                connectionMode={ConnectionMode.Loose}
+                connectionLineType={ConnectionLineType.SmoothStep}
+                isValidConnection={(c) => c.source !== c.target}
+                onNodeDragStart={startDrag}
+                onNodeDrag={moveDrag}
+                onNodeDragStop={stopDrag}
+                onSelectionDragStart={(e, ns) => {
+                  if (ns[0]) startDrag(e.nativeEvent, ns[0], ns);
+                }}
+                onSelectionDrag={(e, ns) => {
+                  if (ns[0]) moveDrag(e.nativeEvent, ns[0], ns);
+                }}
+                onSelectionDragStop={(e, ns) => {
+                  if (ns[0]) stopDrag(e.nativeEvent, ns[0], ns);
+                }}
+                onMoveEnd={(_, v) => {
+                  if (ws.current.current?.boardId !== board.boardId) return;
+                  const old = ws.current.current?.viewport;
+                  if (old && JSON.stringify(old) !== JSON.stringify(v))
+                    ws.update(
+                      (b) => {
+                        b.viewport = v;
+                      },
+                      false,
+                      false,
+                    );
+                }}
+                defaultViewport={board.viewport}
+                minZoom={0.1}
+                maxZoom={3}
+                panOnDrag={[1, 2]}
+                selectionOnDrag
+                selectionMode={SelectionMode.Partial}
+                multiSelectionKeyCode="Shift"
+                selectionKeyCode={null}
+                panActivationKeyCode="Space"
+                zoomOnScroll={false}
+                panOnScroll
+                zoomOnPinch
+                zoomActivationKeyCode="Control"
+                deleteKeyCode={null}
+                disableKeyboardA11y
+                autoPanOnNodeDrag
+                colorMode={dark ? "dark" : "light"}
+              >
+                <Background
+                  variant={BackgroundVariant.Dots}
+                  gap={24}
+                  size={1}
+                  color={dark ? "#26344d" : "#d6dfef"}
+                />
+                <MiniMap
+                  pannable
+                  zoomable
+                  nodeColor={(n) =>
+                    (n.data as FlowNode["data"]).item.background ===
+                    "transparent"
+                      ? "#8b9dc3"
+                      : (n.data as FlowNode["data"]).item.background
+                  }
+                  maskColor={
+                    dark ? "rgba(10,14,23,.6)" : "rgba(247,249,252,.65)"
+                  }
+                />
+                <Controls showInteractive={false} showFitView={false}>
+                  <ControlButton
+                    aria-label="Fit View"
+                    title="適應畫面"
+                    onClick={() => focusItems(visible)}
+                  >
+                    <Maximize2 size={16} />
+                  </ControlButton>
+                </Controls>
+                {(guide.gx !== undefined || guide.gy !== undefined) && (
+                  <svg className="guide-svg">
+                    {guide.gx !== undefined && (
+                      <line
+                        x1={guide.gx * rf.getZoom() + rf.getViewport().x}
+                        x2={guide.gx * rf.getZoom() + rf.getViewport().x}
+                        y1="0"
+                        y2="100%"
+                      />
+                    )}
+                    {guide.gy !== undefined && (
+                      <line
+                        y1={guide.gy * rf.getZoom() + rf.getViewport().y}
+                        y2={guide.gy * rf.getZoom() + rf.getViewport().y}
+                        x1="0"
+                        x2="100%"
+                      />
+                    )}
+                  </svg>
+                )}
+              </ReactFlow>
+            )}
+            {!board.guide && (
               <ToolLibrary
                 insertTemplate={insertTemplate}
                 myTemplates={() => setTemplateDialog("library")}

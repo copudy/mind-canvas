@@ -1,4 +1,24 @@
 import { expect, type Page } from "@playwright/test";
+import { welcomeBoard } from "../src/guide";
+export async function practiceBoard(p: Page) {
+  // Test fixture through the real JSON importer; no official-guide copy action.
+  const b = welcomeBoard();
+  delete b.guide;
+  b.name = "測試操作白板";
+  await dataAction(p, "匯入專案");
+  await p.locator('input[type="file"]').setInputFiles({
+    name: "practice.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(
+      JSON.stringify({
+        format: "freeform-mind-canvas",
+        schemaVersion: 1,
+        boards: [b],
+      }),
+    ),
+  });
+  await waitSaved(p);
+}
 export async function waitSaved(p: Page) {
   await expect(p.locator(".workbench")).toHaveAttribute(
     "data-save-state",

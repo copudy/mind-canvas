@@ -365,6 +365,7 @@ export function useWorkspace() {
     await persist(b);
   };
   const duplicate = async (bid: string) => {
+    if (all.current.find((b) => b.boardId === bid)?.guide) return;
     await flush();
     const b = clone(all.current.find((b) => b.boardId === bid)!);
     b.boardId = id();

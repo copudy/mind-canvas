@@ -1,5 +1,9 @@
 # Mind Canvas 安全交接
 
+## v1.1.1 指南修正發布執行（最新）
+
+2026-10-12 使用者授權修改後直接部署。分支 fix/v1.1.1-guide、版本 1.1.1。文件指南取代畫布指南、移除副本入口與浮動遮擋，資料格式未改且保留既有白板。Lint／Build、59/59 單元、51/51 完整瀏覽器回歸通過（3.2 分鐘）。詳見 V111_REPORT.md；部署結果將追加於最上方。v1.1.0／v1.0.0 標記不移動。
+
 ## v1.1.0 正式部署完成（最新）
 
 使用者本次明確授權後已正常推送 main 與 annotated Tag v1.1.0；發布 Commit `be694832d7b542ada290aba4cd66f2be7b9ee63f`。Actions https://github.com/copudy/mind-canvas/actions/runs/38153553180 的 build／deploy 均 success。正式網址 https://copudy.github.io/mind-canvas/ ，公開 Repository https://github.com/copudy/mind-canvas 。v1.0.0 保留、不移動，未 Force Push，未發布額外 GitHub Release。

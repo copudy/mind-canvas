@@ -1,5 +1,9 @@
 # 第一次原型測試報告
 
+## v1.1.1 指南重整發布前（最新）
+
+A：Lint／正式 Build、59/59 單元與 51/51 完整瀏覽器回歸通過（3.2 分鐘）。新版指南文件式排版、無縮放／Minimap／底部浮動列／副本入口，六章可捲動跳轉，備份捷徑與開始／繼續／Header 返回正常。1440／390／320、矮視窗與淺深色檢查通過，品牌詞完整、無水平溢出。既有白板、計算機、範本、JSON、IDB 及離線回歸通過。詳 V111_REPORT.md；正式結果待部署後紀錄。
+
 ## v1.1.0 正式驗證完成（最新）
 
 A／實測：Actions 38153553180 build／deploy 成功，發布 Commit be694832d7b542ada290aba4cd66f2be7b9ee63f。正式 https://copudy.github.io/mind-canvas/ 隔離 Edge **2/2 通過（11.8 秒）**，含標題、Logo／Favicon／PWA 圖示、指南、白板建立編輯、計算機、JSON 備份副本還原、IndexedDB 刷新、SW 範圍、離線重載與運算保存、390×844 手機。截圖 artifacts/production-desktop.png／production-mobile.png 已更新。測試不操作使用者 profile。

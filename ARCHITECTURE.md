@@ -1,5 +1,9 @@
 # 架構與決策
 
+## v1.1.1 文件指南
+
+GuidePage 在官方指南分支以原生捲動與 CSS Grid 呈現；普通白板保持原 XYFlow 渲染。指南不再使用 RF 視角，不改 DB 文件格式，問候讀取原指南節點，resume／create／backup 共用既有 Workspace／Settings 動作。官方指南 duplicate 在 Workspace 層禁止，原副本不刪除。
+
 ## v1.1 本機增量（最新）
 
 templates.ts以既有Board／Item／Relation捕捉、正規化相對座標及重新產生插入ID，保留內部樹／圖及樣式；TemplateDialog重用單一儲存／改名／刪除介面。IndexedDB版本1不变，meta新增templates-v1，完整匯入在單交易写入白板與範本；JSON容器2搭配仍為1的Board schema，兼容舊容器1。

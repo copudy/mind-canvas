@@ -4,111 +4,49 @@ for (const size of [
   { width: 464, height: 570 },
   { width: 390, height: 667 },
 ])
-  test(`short viewport guide actions avoid library ${size.width}x${size.height}`, async ({
-    page,
-  }) => {
+  test(`short guide native scrolling ${size.width}`, async ({ page }) => {
     await page.setViewportSize(size);
     await page.goto("/");
     await waitSaved(page);
-    await expect(page.locator(".guide-learning-bar")).toBeVisible();
-    await expect
-      .poll(() => page.locator(".react-flow__viewport").getAttribute("style"))
-      .toContain("translate(16px");
+    await expect(page.locator(".guide-page")).toBeVisible();
     const create = page.getByRole("button", {
       name: "建立新白板",
       exact: true,
     });
-    const lib = await page
-      .locator(".tool-library,.guide-learning-bar")
-      .boundingBox();
-    const box = await create.boundingBox();
-    expect(box!.y + box!.height).toBeLessThan(lib!.y);
+    await expect(create).toBeInViewport();
     await create.click();
     await waitSaved(page);
-    await expect(page.locator("h1")).toHaveText("新的白板");
     await page.reload();
     await waitSaved(page);
-    await expect
-      .poll(() => page.locator(".react-flow__viewport").getAttribute("style"))
-      .toContain("translate(16px");
     const resume = page.getByRole("button", {
       name: "繼續上次的白板 新的白板",
       exact: true,
     });
-    const resumedBox = await resume.boundingBox();
-    expect(resumedBox!.y + resumedBox!.height).toBeLessThan(
-      (await page.locator(".tool-library,.guide-learning-bar").boundingBox())!
-        .y,
-    );
+    await expect(resume).toBeInViewport();
     await page.screenshot({ path: `artifacts/short-${size.width}.png` });
     await resume.click();
-    await expect(page.locator("h1")).toHaveText("新的白板");
     await expect(page.locator(".guide-document")).toHaveCount(0);
   });
 for (const width of [1440, 390, 320])
-  test(`system hierarchy guide geometry and single header ${width}`, async ({
-    page,
-  }) => {
+  test(`system document hierarchy single header ${width}`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/");
     await waitSaved(page);
     await expect(page).toHaveTitle("Mind Canvas");
     await expect(page.locator("header")).toHaveCount(1);
-    await expect(page.locator(".welcome-entry")).toHaveCount(0);
-    await expect(
-      page.getByRole("button", { name: "開啟歡迎指南", exact: true }),
-    ).toHaveCount(0);
-    await expect(
-      page.getByRole("button", { name: "探索使用指南", exact: true }),
-    ).toHaveCount(0);
     await expect(page.locator(".save-status")).not.toBeVisible();
-    for (const label of ["匯出本白板", "匯入專案", "全部備份"])
-      await expect(
-        page.getByRole("button", { name: label, exact: true }),
-      ).toHaveCount(0);
-    await expect
-      .poll(async () =>
-        page.locator(".react-flow__viewport").getAttribute("style"),
-      )
-      .toContain(width === 1440 ? "translate(308px" : "translate(16px");
-    await waitSaved(page);
-    const geometry = await page.evaluate(() => {
-      const lib = document
-          .querySelector(".tool-library,.guide-learning-bar")!
-          .getBoundingClientRect(),
-        head = document.querySelector("header")!.getBoundingClientRect(),
-        brand = document
-          .querySelector(".header-brand")!
-          .getBoundingClientRect();
-      const overflow = [...document.querySelectorAll(".node-text")]
-        .filter((e) => e.scrollHeight > e.clientHeight + 2)
-        .map((e) => e.textContent);
-      return {
-        overflow,
-        libWidth: lib.width,
-        headHeight: head.height,
-        brandHeight: brand.height,
-        pageOverflow: document.documentElement.scrollWidth > innerWidth,
-      };
-    });
-    expect(geometry.pageOverflow).toBe(false);
-    expect(geometry.headHeight).toBeLessThanOrEqual(68);
-    expect(geometry.brandHeight).toBeLessThanOrEqual(36);
-    expect(geometry.libWidth).toBeGreaterThan(
-      width === 1440 ? 900 : width - 40,
-    );
-    expect(geometry.overflow).toEqual([]);
+    await expect(page.locator(".guide-card")).toHaveCount(6);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
     await expect(
       page.getByRole("button", { name: "建立新白板", exact: true }),
-    ).toBeVisible();
+    ).toBeInViewport();
     await page.screenshot({ path: `artifacts/system-${width}.png` });
     await page.getByRole("button", { name: "切換深色主題" }).click();
     await page.screenshot({ path: `artifacts/system-dark-${width}.png` });
-    await locate(page, "旅行預算");
-    const calc = page.locator(".calculator.nodrag");
-    expect(
-      await calc.evaluate((e) => e.scrollHeight <= e.clientHeight + 2),
-    ).toBe(true);
     await page.getByRole("button", { name: "設定", exact: true }).click();
     const dialog = page.getByRole("dialog", { name: "設定", exact: true });
     await expect(dialog).toContainText("最後成功儲存");

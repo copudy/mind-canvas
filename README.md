@@ -1,5 +1,7 @@
 # PD-1 Center | Mind Canvas
 
+最新 **v1.1.1**：指南改為清楚的捲動文件、六章導覽與開始入口，不再提供指南副本。詳見 [V111_REPORT.md](V111_REPORT.md) 與 [部署狀態](DEPLOYMENT.md)。下方 v1.1.0 為前版紀錄，指南副本已移除。
+
 目前版本為 **v1.1.0**，已取得正式發布授權；發布狀態見 [DEPLOYMENT.md](DEPLOYMENT.md)，功能見 [V11_REPORT.md](V11_REPORT.md)。指南在 Header「說明與幫助」，官方原稿只讀，練習請建立副本。計算機只有一個入口，可在工具內釘選／解除。思考框架包含官方範本與我的範本；完整備份保存自訂範本，含範本的格式 2 需用新版還原。
 
 正式 **v1.1.0**：[開啟 Mind Canvas](https://copudy.github.io/mind-canvas/) · [GitHub](https://github.com/copudy/mind-canvas)。部署与正式測試見 DEPLOYMENT.md，後續版本流程見 RELEASE_SOP.md。本機與正式網址的資料獨立，請透過 JSON 搬移。

@@ -1,3 +1,4 @@
+import { practiceBoard } from "./ui";
 import { waitSaved, dataAction, enterGuide, locate } from "./ui";
 import { test, expect, chromium, type Page } from "@playwright/test";
 import { makeBoard, makeItem } from "../src/model";
@@ -66,9 +67,7 @@ test("brand assets title tokens and unobstructed bottom library", async ({
   await expect(
     page.getByRole("button", { name: "平移工具", exact: true }),
   ).toHaveCount(0);
-  await page
-    .getByRole("button", { name: "建立可編輯副本", exact: true })
-    .click();
+  await practiceBoard(page);
   const library = await page.locator(".tool-library").boundingBox();
   const canvas = await page.locator(".canvas-surface").boundingBox();
   const minimap = await page.locator(".react-flow__minimap").boundingBox();
@@ -114,19 +113,17 @@ test("guide protected greeting stable and practice remains editable", async ({
   const original = (await boards(page))[0];
   expect(original.name).toBe("Mind Canvas 使用指南");
   const first = await page
-    .locator(".node-text")
+    .locator(".guide-greeting")
     .filter({ hasText: new RegExp(greetings.join("|")) })
     .innerText();
   await enterGuide(page);
   expect(
     await page
-      .locator(".node-text")
+      .locator(".guide-greeting")
       .filter({ hasText: new RegExp(greetings.join("|")) })
       .innerText(),
   ).toBe(first);
-  await page
-    .getByRole("button", { name: "建立可編輯副本", exact: true })
-    .click();
+  await practiceBoard(page);
   await saved(page);
   await locate(page, "旅行計畫");
   await item(page, "旅行計畫").click();
@@ -303,9 +300,7 @@ test("mobile tool library scrolls does not collide minimap and dark guide readab
   await expect(
     page.getByRole("button", { name: "展開白板清單" }),
   ).toBeVisible();
-  await page
-    .getByRole("button", { name: "建立可編輯副本", exact: true })
-    .click();
+  await practiceBoard(page);
   await page.getByRole("tab", { name: "文字筆記", exact: true }).click();
   const lib = await page.locator(".tool-library").boundingBox(),
     mini = await page.locator(".react-flow__minimap").boundingBox();
@@ -335,16 +330,14 @@ test("JSON browser roundtrip preserves every guide object field and calculator w
   page,
 }) => {
   await ready(page);
-  await page
-    .getByRole("button", { name: "建立可編輯副本", exact: true })
-    .click();
+  await practiceBoard(page);
   await locate(page, "旅行預算");
   const calc = page.getByRole("textbox", { name: "計算機算式" });
   await calc.fill("0.1+0.2");
   await calc.press("Enter");
   await saved(page);
   const before = (await boards(page)).find(
-    (b) => !b.guide && b.name.endsWith("（複本）"),
+    (b) => !b.guide && b.name.startsWith("測試操作白板"),
   );
   const download = page.waitForEvent("download");
   await dataAction(page, "匯出本白板");

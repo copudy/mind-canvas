@@ -94,42 +94,25 @@ async function tool(p: Page, category: string, name: string) {
   await p.getByRole("tab", { name: category, exact: true }).click();
   await p.getByRole("button", { name, exact: true }).click();
 }
-test("official guide protected, sequential, returns from any board and editable copy isolated", async ({
+test("official guide read-only document, no copy, returns from any board", async ({
   page,
 }) => {
   await page.goto("/");
   await waitSaved(page);
-  await expect(page.locator(".guide-learning-bar")).toContainText("原稿受保護");
   const original = (await docs(page)).find((b) => b.guide);
-  expect(original.name).toBe("Mind Canvas 使用指南");
-  const chapters = original.nodes.filter((n: any) => /^0[1-6] /.test(n.text));
-  expect(chapters.map((n: any) => n.position.y)).toEqual(
-    [...chapters.map((n: any) => n.position.y)].sort(
-      (a: number, b: number) => a - b,
-    ),
-  );
-  expect(chapters[0].position.y).toBeGreaterThan(500);
-  await expect(page.locator(".sidebar .guide-entry")).toHaveCount(0);
-  const title = page.locator(".node-text", { hasText: "歡迎來到 Mind Canvas" });
-  await title.dblclick();
+  await expect(page.locator(".guide-page")).toBeVisible();
+  await expect(page.locator(".guide-card")).toHaveCount(6);
+  await expect(page.locator(".guide-document .react-flow")).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "建立可編輯副本", exact: true }),
+  ).toHaveCount(0);
+  await page.locator(".guide-hero h2").dblclick();
   await page.keyboard.press("Delete");
   await page.keyboard.press("Control+d");
   await expect(page.getByRole("textbox", { name: "編輯節點文字" })).toHaveCount(
     0,
   );
-  await expect(page.locator(".inspector")).toHaveCount(0);
-  await page
-    .getByRole("button", { name: "建立可編輯副本", exact: true })
-    .click();
-  await waitSaved(page);
-  await expect(page.locator(".guide-document")).toHaveCount(0);
-  await page
-    .locator(".node-text", { hasText: "歡迎來到 Mind Canvas" })
-    .dblclick();
-  await page.getByRole("textbox", { name: "編輯節點文字" }).fill("我的練習");
-  await page
-    .getByRole("textbox", { name: "編輯節點文字" })
-    .press("Control+Enter");
+  await page.getByRole("button", { name: "建立新白板", exact: true }).click();
   await waitSaved(page);
   await guide(page);
   const after = (await docs(page)).find((b) => b.guide);
@@ -269,24 +252,18 @@ test("single calculator mode toggles preserve ID, values, close/reopen and relat
   expect((await docs(page)).find((b) => !b.guide).nodes).toHaveLength(1);
 });
 for (const width of [1440, 390, 320])
-  test(`guide readability and sidebar stable viewport ${width}`, async ({
+  test(`guide readable document and sidebar stable canvas ${width}`, async ({
     page,
   }) => {
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/");
     await waitSaved(page);
-    await page.waitForTimeout(400);
-    const style = await page
-        .locator(".react-flow__viewport")
-        .getAttribute("style"),
-      box = await page.locator(".canvas-surface").boundingBox();
+    await expect(page.locator(".guide-page")).toBeVisible();
+    const box = await page.locator(".canvas-surface").boundingBox();
     const toggle = page.getByRole("button", { name: /白板清單/ });
-    const oldLabel = await toggle.getAttribute("aria-label");
+    const label = await toggle.getAttribute("aria-label");
     await toggle.click();
-    await expect(toggle).not.toHaveAttribute("aria-label", oldLabel!);
-    expect(
-      await page.locator(".react-flow__viewport").getAttribute("style"),
-    ).toBe(style);
+    await expect(toggle).not.toHaveAttribute("aria-label", label!);
     expect(await page.locator(".canvas-surface").boundingBox()).toEqual(box);
     if (width <= 760) await toggle.click();
     expect(
@@ -294,12 +271,26 @@ for (const width of [1440, 390, 320])
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBe(true);
-    const create = await page
-        .getByRole("button", { name: "建立新白板", exact: true })
-        .boundingBox(),
-      bar = await page.locator(".guide-learning-bar").boundingBox();
-    expect(create!.y + create!.height).toBeLessThan(bar!.y);
-    await page.screenshot({ path: `artifacts/v11-guide-${width}.png` });
+    const geometry = await page
+      .locator(".guide-hero h2 span")
+      .evaluate((e) => ({
+        height: e.getBoundingClientRect().height,
+        line: parseFloat(getComputedStyle(e).lineHeight),
+        width: e.getBoundingClientRect().width,
+      }));
+    expect(geometry.height).toBeLessThanOrEqual(geometry.line + 3);
+    await expect(
+      page.locator(
+        ".guide-learning-bar,.guide-document .react-flow__controls,.guide-document .react-flow__minimap",
+      ),
+    ).toHaveCount(0);
+    await page.screenshot({ path: `artifacts/v111-guide-${width}.png` });
     await page.getByRole("button", { name: "切換深色主題" }).click();
-    await page.screenshot({ path: `artifacts/v11-guide-dark-${width}.png` });
+    await page.screenshot({ path: `artifacts/v111-guide-dark-${width}.png` });
+    await page.getByRole("link", { name: "05 資料與備份" }).click();
+    await expect(page.locator("#guide-backup")).toBeInViewport();
+    await page.getByRole("button", { name: "開啟資料與備份" }).click();
+    await expect(
+      page.getByRole("dialog", { name: "設定", exact: true }),
+    ).toContainText("IndexedDB");
   });
