@@ -1,5 +1,15 @@
 # Mind Canvas v1.0.0 部署紀錄
 
+## v1.1.1 已正式上線（最新，2026-10-12）
+
+使用者已授權調整後直接部署，正式網址 https://copudy.github.io/mind-canvas/ ，Repository https://github.com/copudy/mind-canvas 。分支 main，annotated Tag v1.1.1，發布 Commit `0459123fc8a2837f74175ea96fe3853f38622e8f`；Actions https://github.com/copudy/mind-canvas/actions/runs/38154965129 build／deploy 成功。v1.1.0／v1.0.0 標記與歷史保留，未 Force Push。
+
+A／實測：本機 Lint／Build、59/59 單元、51/51 完整瀏覽器回歸通過；正式 Edge **3/3 通過（13.5 秒）**。指南於 1440／390／320 寬驗證六章、Mind Canvas 品牌詞完整、無水平溢出、無畫布控制／浮動列／副本入口、章節跳轉及備份捷徑；白板建立編輯、JSON、IndexedDB、計算機、SW 子路徑與離線保存也通過。正式截圖 artifacts/production-v111-guide-*.png 已檢視；指南設計報告 V111_REPORT.md。
+
+資料格式未變，使用者既有白板及練習資料未刪除／覆寫。E：實體手機、OS PWA 安裝、既有正式 profile 的 SW 更新、真實逐出／配額／斷電仍待手動驗證。若仍見舊頁，關閉本站分頁重新開啟或刷新，不清除網站資料。
+
+下一 Session 先讀本節／V111_REPORT／git status 再依使用者問題接手；此次發布已完成，不再自動部署，後續版本另取授權。測試與文件記錄 Commit 在發布之後，不移動 v1.1.1 Tag。
+
 ## v1.1.0 發布完成（最新）
 
 - 正式網址：https://copudy.github.io/mind-canvas/ ，公開 Repository：https://github.com/copudy/mind-canvas 。

@@ -2,6 +2,43 @@ import { test, expect } from "@playwright/test";
 import { waitSaved, dataAction } from "./ui";
 import { readFile } from "node:fs/promises";
 
+test("production guide document is readable with no canvas overlays or copy action", async ({
+  page,
+}) => {
+  for (const width of [1440, 390, 320]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("./");
+    await waitSaved(page);
+    await expect(page.locator(".guide-page")).toBeVisible();
+    await expect(page.locator(".guide-card")).toHaveCount(6);
+    await expect(
+      page.locator(".guide-document .react-flow,.guide-learning-bar"),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "建立可編輯副本", exact: true }),
+    ).toHaveCount(0);
+    const heading = await page.locator(".guide-hero h2 span").evaluate((e) => ({
+      height: e.getBoundingClientRect().height,
+      lineHeight: parseFloat(getComputedStyle(e).lineHeight),
+    }));
+    expect(heading.height).toBeLessThanOrEqual(heading.lineHeight + 3);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await page.screenshot({
+      path: `artifacts/production-v111-guide-${width}.png`,
+    });
+    await page.getByRole("link", { name: "05 資料與備份" }).click();
+    await expect(page.locator("#guide-backup")).toBeInViewport();
+    await page.getByRole("button", { name: "開啟資料與備份" }).click();
+    await expect(
+      page.getByRole("dialog", { name: "設定", exact: true }),
+    ).toContainText("IndexedDB");
+  }
+});
+
 test("production assets, board editing, JSON restore and offline PWA", async ({
   page,
   context,
