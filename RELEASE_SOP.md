@@ -1,6 +1,6 @@
 # Mind Canvas 發布與更新 SOP
 
-發布目標：公開 https://github.com/copudy/mind-canvas ，GitHub Pages https://copudy.github.io/mind-canvas/ 。v1.0.0 首次發布與本次 v1.1.0 已分別取得使用者授權，後續版本仍需另有授權。
+發布目標：公開 https://github.com/copudy/mind-canvas ，GitHub Pages https://copudy.github.io/mind-canvas/ 。每次發布須取得使用者授權；已完成版本與對應紀錄見 HANDOFF／DEPLOYMENT 最新段落。
 
 1. 讀 HANDOFF、DEPLOYMENT、TEST_REPORT，檢查工作區、分支、Remote、授權與 Tag；不 reset、Force Push 或覆蓋既有 Tag。
 2. 審查所有待提交內容、Git歷史中的秘密與公開截圖；不要提交 .env、私鑰、瀏覽器白板或登入資料。先匯出重要白板。
