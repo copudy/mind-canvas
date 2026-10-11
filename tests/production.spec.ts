@@ -32,7 +32,10 @@ test("production assets, board editing, JSON restore and offline PWA", async ({
   expect(assets.icons.every(Boolean)).toBe(true);
   await page.getByRole("button", { name: "建立新白板", exact: true }).click();
   await page.getByRole("tab", { name: "實用工具", exact: true }).click();
-  await page.getByRole("button", { name: "釘選計算機", exact: true }).click();
+  await page.getByRole("button", { name: "計算機", exact: true }).click();
+  await page
+    .getByRole("button", { name: "釘選浮動計算機", exact: true })
+    .click();
   const input = page.getByRole("textbox", { name: "計算機算式" });
   await input.fill("0.1+0.2");
   await input.press("Enter");
