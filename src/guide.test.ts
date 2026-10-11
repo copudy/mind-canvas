@@ -1,5 +1,10 @@
 import { it, expect } from "vitest";
-import { welcomeBoard, refreshGreeting, greetings } from "./guide";
+import {
+  welcomeBoard,
+  refreshGreeting,
+  greetings,
+  arrangeGuide,
+} from "./guide";
 import { exportProject, importProject, validateBoard } from "./storage";
 import { makeBoard, clone } from "./model";
 it("guide is valid portable real editable content with stable document references", () => {
@@ -35,4 +40,31 @@ it("invalid guide references are rejected", () => {
   const b = welcomeBoard();
   b.guide!.greetingId = "missing";
   expect(() => validateBoard(b)).toThrow("指南");
+});
+it("guide presentation upgrade preserves stable IDs and custom notes and is idempotent", () => {
+  const b = welcomeBoard();
+  const old = clone(b);
+  delete b.guide!.entryId;
+  delete b.guide!.backupId;
+  b.nodes = b.nodes.filter(
+    (n) => n.id !== old.guide!.entryId && n.id !== old.guide!.backupId,
+  );
+  const ids = b.nodes.map((n) => n.id);
+  const custom = b.nodes[3];
+  custom.text = "我的自訂教學文字";
+  arrangeGuide(b);
+  expect(ids.every((id) => b.nodes.some((n) => n.id === id))).toBe(true);
+  expect(b.nodes.find((n) => n.id === custom.id)!.text).toBe(
+    "我的自訂教學文字",
+  );
+  const after = clone(b);
+  arrangeGuide(b);
+  expect(b).toEqual(after);
+  expect(b.nodes.filter((n) => n.parentId)).toHaveLength(2);
+  expect(b.relations).toEqual(old.relations);
+});
+it("invalid guide action references are rejected", () => {
+  const b = welcomeBoard();
+  b.guide!.entryId = "missing";
+  expect(() => validateBoard(b)).toThrow("指南操作");
 });

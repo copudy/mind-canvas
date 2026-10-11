@@ -57,6 +57,8 @@ export default function ToolLibrary({
   const [category, setCategory] =
     useState<(typeof categories)[number]>("思考框架");
   const [collapsed, setCollapsed] = useState(() => {
+    // Short viewports start compact without overwriting the saved preference.
+    if (window.innerHeight < 700) return true;
     try {
       return localStorage.getItem("mind-tools-collapsed") === "true";
     } catch {

@@ -1,8 +1,9 @@
+import { waitSaved, dataAction, enterGuide, locate } from "./ui";
 import { test, expect, type Page } from "@playwright/test";
 import { makeBoard, makeItem, demoBoard } from "../src/model";
 async function ready(page: Page, url = "/") {
   await page.goto(url);
-  await expect(page.getByText("已儲存於此裝置", { exact: true })).toBeVisible();
+  await waitSaved(page);
   const initialBoards = await readBoards(page);
   if (initialBoards.length === 1 && initialBoards[0].guide) {
     await expect
@@ -35,7 +36,7 @@ async function ready(page: Page, url = "/") {
     return true;
   }, demoBoard());
   if (seeded) await reloadToLast(page);
-  await expect(page.getByText("已儲存於此裝置", { exact: true })).toBeVisible();
+  await waitSaved(page);
 }
 async function reloadToLast(page: Page) {
   await page.reload();
@@ -64,7 +65,7 @@ const nodes = (page: Page) => page.locator(".react-flow__node");
 const node = (page: Page, text: string) =>
   nodes(page).filter({ has: page.locator(".node-text", { hasText: text }) });
 async function saved(page: Page) {
-  await expect(page.getByText("已儲存於此裝置", { exact: true })).toBeVisible();
+  await waitSaved(page);
 }
 async function edit(page: Page, text: string) {
   const field = page.getByRole("textbox", { name: "編輯節點文字" });
@@ -219,7 +220,7 @@ test("independent boards, rename duplicate search and JSON roundtrip", async ({
   await page.getByRole("button", { name: /測試工作台.*1 個想法/ }).click();
   await expect(page.getByText("獨立白板資料", { exact: true })).toBeVisible();
   const download = page.waitForEvent("download");
-  await page.getByRole("button", { name: "匯出本白板", exact: true }).click();
+  await dataAction(page, "匯出本白板");
   const path = await (await download).path();
   await page.locator("input[type=file]").setInputFiles(path!);
   await expect(
@@ -363,14 +364,19 @@ test("production PWA installs cache, reloads offline and saves calculator state"
   await expect(page.locator("output")).toHaveText("4400");
   await saved(page);
   await context.setOffline(true);
+  const favicon = await page.evaluate(async () => {
+    const response = await fetch(
+      document.querySelector<HTMLLinkElement>('link[rel="icon"]')!.href,
+    );
+    return { ok: response.ok, svg: (await response.text()).includes("<svg") };
+  });
+  expect(favicon).toEqual({ ok: true, svg: true });
   await reloadToLast(page);
   await expect(page.locator("output")).toHaveText("4400");
   await input.fill("4400/2");
   await input.press("Enter");
   await expect(page.locator("output")).toHaveText("2200");
-  await expect(
-    page.getByText("離線 · 已儲存於此裝置", { exact: true }),
-  ).toBeVisible();
+  await waitSaved(page);
   await context.setOffline(false);
   await reloadToLast(page);
   await saved(page);
@@ -440,7 +446,7 @@ test("storage failures are visible and never claim success", async ({
     page.getByText("已儲存於此裝置", { exact: true }),
   ).not.toBeVisible();
   const download = page.waitForEvent("download");
-  await page.getByRole("button", { name: "全部備份", exact: true }).click();
+  await dataAction(page, "全部備份");
   expect((await download).suggestedFilename()).toContain("workspace");
 });
 
@@ -754,7 +760,7 @@ test("long multiline auto-size remains exportable and fully restores", async ({
   const b = (await readBoards(page)).find((b) => b.name === "新的白板");
   expect(b.nodes[0].height).toBeLessThanOrEqual(3000);
   const download = page.waitForEvent("download");
-  await page.getByRole("button", { name: "匯出本白板", exact: true }).click();
+  await dataAction(page, "匯出本白板");
   const file = await (await download).path();
   await page.locator("input[type=file]").setInputFiles(file!);
   await expect(

@@ -2,11 +2,8 @@ import { useState } from "react";
 import {
   Plus,
   Search,
-  PanelLeftClose,
   MoreHorizontal,
   Layers,
-  Download,
-  Upload,
   Copy,
   Pencil,
   Trash2,
@@ -27,8 +24,6 @@ type Props = {
   onDuplicate: (id: string) => void;
   onDelete: (id: string) => void;
   onClose: () => void;
-  onBackup: () => void;
-  onImport: () => void;
   onPin: (id: string) => void;
   onAddSection: (name: string) => void;
   onRenameSection: (id: string, name: string) => void;
@@ -196,19 +191,6 @@ export default function Sidebar(p: Props) {
   );
   return (
     <aside className="sidebar">
-      <div className="brand">
-        <img
-          className="brand-logo"
-          src={`${import.meta.env.BASE_URL}icon.svg`}
-          alt="PD-1 Center"
-        />
-        <div>
-          PD-1 Center<small>Mind Canvas · 自由思維畫布</small>
-        </div>
-        <button aria-label="收合白板清單" onClick={p.onClose}>
-          <PanelLeftClose size={22} />
-        </button>
-      </div>
       <button className="new-board" onClick={p.onAdd}>
         <Plus size={22} />
         新的白板<span>＋</span>
@@ -216,6 +198,7 @@ export default function Sidebar(p: Props) {
       {guide && (
         <button
           className={`guide-entry ${p.active === guide.boardId ? "active" : ""}`}
+          disabled={p.active === guide.boardId}
           onClick={() => p.onOpen(guide.boardId)}
         >
           <BookOpen size={22} />
@@ -354,16 +337,6 @@ export default function Sidebar(p: Props) {
         <p className="storage-note">
           資料儲存在目前瀏覽器，不會跨裝置同步。清除網站資料、無痕模式或共用設定檔可能影響資料，請定期備份。
         </p>
-        <div className="backup-buttons">
-          <button onClick={p.onBackup}>
-            <Download size={20} />
-            全部備份
-          </button>
-          <button onClick={p.onImport}>
-            <Upload size={20} />
-            匯入
-          </button>
-        </div>
       </div>
     </aside>
   );

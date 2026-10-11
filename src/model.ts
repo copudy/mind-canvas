@@ -42,7 +42,12 @@ export interface Relation {
   waypoints?: Point[];
 }
 export interface Board {
-  guide?: { version: 1; greetingId: string };
+  guide?: {
+    version: 1;
+    greetingId: string;
+    entryId?: string;
+    backupId?: string;
+  };
   schemaVersion: 1;
   boardId: string;
   name: string;

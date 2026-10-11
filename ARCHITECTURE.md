@@ -1,5 +1,7 @@
 # 架構與決策
 
+目前增量以末節「全站 UI/UX 整頓架構增量」及 SYSTEM_UX_REPORT.md 為準；前段保留架構演進記錄。
+
 ## 選型（2026-10-11）
 
 | 候選 | 功能／效能／維護 | 授權 | 決策 |
@@ -62,4 +64,17 @@ workspacePrefs.ts 將工作區偏好獨立於 Board：version1、lastOpened、pi
 
 useWorkspace初始化保留既有文件、補唯一指南、刷新一次問候並開指南。管理設定採獨立序列寫入／失敗提示；初始化設定失敗仍呈現已讀取文件。update的contentChange旗標使視角寫入不修改updatedAt。指南開啟不修改lastOpened，工作白板開啟／新增／複製／匯入更新它；刪除時清除無效參照。
 
-Design Tokens集中定義UI14、輔助／工具13、點擊40。React Flow文件座標與縮放維持原系統，不使用CSS zoom。歡迎入口是指南專用介面，問候仍是該指南文字物件；探索只調整畫布視角與入口高度。新計算機430px高並置於可視中央，舊資料保持原尺寸與座標。
+此段為前一版決策：目前比例與入口見下節。React Flow 文件座標與縮放維持原系統，不使用 CSS zoom。新計算機430px高並置於可視中央，舊一般白板保持原尺寸與座標。
+
+## 全站 UI/UX 整頓架構增量（目前版本）
+
+- design-tokens.css 定義 UI15／輔助13／工具14／點擊44／間距4–24；workspace-ui.css 統一單列 Header、側欄、工具庫、指南入口與設定響應式規則，工具圖示22、工具112×80、庫高148／收合36。
+- DataSettings 是唯一資料管理介面，呼叫既有 workspace backup／restore／persistence；指南捷徑、命令搜尋與 Header 設定指向同一組功能。移除第二層指南導覽與側欄重複資料按鈕。
+- Board.guide 增加可選 entryId／backupId，驗證有效文字物件；不改 schema／DB 版本。CanvasNode 在這些指南物件中渲染操作，問候仍是指定文字節點。arrangeGuide 保留原ID／關係，一次重新安排標準教學、加入操作物件；有入口不重複新增，標準主視覺緊湊遷移只處理尚未移動的入口。
+- 內容／視角更新先比較快照，無差異跳過。schedule 內容800ms／視角1600ms；節點拖曳與調尺寸透過 beginGesture／endGesture 暫停計時並於放開250ms提交；switch／visibility flush 與 beforeunload 保護保持。
+- meta 增加 saved-boardId／backup-at 字串時間戳，白板與成功時間在同一交易保存，交易完成才報告成功。備份時間只記錄下載啟動；畫面不把它當成落地成功。內容與視角仍保存同一 Board 快照，未引入新持久化框架。
+- 一般狀態只在設定顯示，錯誤仍主畫面警告。設定開啟時停用畫布快捷鍵，避免誤刪背後物件。
+- PWA保留相對路徑；Favicon版本參數v納入Workbox忽略條件，避免離線時讀不到已快取SVG。正式素材blob未更改。
+- 高度不足700px的工具庫初始收合但不覆寫原偏好；指南隱藏Minimap／縮放輔助控制，保留主要CTA與手勢／搜尋。一般白板仍有Minimap與控制。
+
+詳細機制、證據與風險見 SYSTEM_UX_REPORT.md。原React＋XYFlow＋IndexedDB＋Decimal架構維持，不新增外部依賴或服務。

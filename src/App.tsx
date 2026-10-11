@@ -27,15 +27,11 @@ import {
   Sun,
   Moon,
   PanelLeftOpen,
-  Download,
-  Upload,
   Search,
-  HelpCircle,
   X,
   Plus,
   LocateFixed,
   Settings2,
-  Pin,
 } from "lucide-react";
 import CanvasNode, {
   CanvasContext,
@@ -52,7 +48,7 @@ import {
 } from "./components/WorkbenchDialogs";
 import Inspector from "./components/Inspector";
 import ToolLibrary from "./components/ToolLibrary";
-import { requestPersistence } from "./persistence";
+import DataSettings from "./components/DataSettings";
 import { useWorkspace } from "./useWorkspace";
 import {
   makeItem,
@@ -97,7 +93,7 @@ function Workbench() {
     [editId, setEdit] = useState<string | null>(null),
     [sidebar, setSidebar] = useState(() => window.innerWidth > 760),
     [resetGuide, setResetGuide] = useState(false),
-    [exploringGuide, setExploringGuide] = useState(false),
+    [settings, setSettings] = useState(false),
     [dark, setDark] = useState(() => {
       try {
         return localStorage.getItem("mind-theme") === "dark";
@@ -149,7 +145,6 @@ function Workbench() {
   }, []);
   useEffect(() => {
     setSelected([]);
-    setExploringGuide(false);
     setSelectedEdge(null);
     setEdit(null);
     setConnectSource(null);
@@ -157,20 +152,19 @@ function Workbench() {
     setGuide({});
     if (ws.board) {
       void rf.setViewport(ws.board.viewport);
-      if (ws.board.guide && ws.board.viewport.zoom === 0.55) {
-        const timer = setTimeout(
-          () =>
-            void rf.fitView({
-              padding: {
-                top: "35px",
-                bottom: "180px",
-                left: "35px",
-                right: "35px",
-              },
-              duration: 0,
-            }),
-          200,
+      if (ws.board.guide) {
+        const entry = ws.board.nodes.find(
+          (n) => n.id === ws.board!.guide!.entryId,
         );
+        const timer = setTimeout(() => {
+          const area = document
+            .querySelector(".canvas-surface")
+            ?.getBoundingClientRect();
+          if (area && entry) {
+            const zoom = Math.min(1, (area.width - 32) / entry.width);
+            void rf.setViewport({ x: 16, y: 24, zoom });
+          }
+        }, 200);
         return () => clearTimeout(timer);
       }
     }
@@ -458,6 +452,7 @@ function Workbench() {
       if (c.type === "select" && c.selected) setSelectedEdge(c.id);
   };
   const startDrag: OnNodeDrag<FlowNode> = (_, n, ns) => {
+    ws.beginGesture();
     const b = ws.current.current;
     if (!b) return;
     const ids = new Set<string>();
@@ -555,6 +550,7 @@ function Workbench() {
       notify("分支已重新掛載，可復原");
     }
     drag.current = null;
+    ws.endGesture();
     setMount(null);
     setGuide({});
   };
@@ -613,6 +609,7 @@ function Workbench() {
         e.isComposing ||
         help ||
         command ||
+        settings ||
         deleteBoard ||
         resetGuide
       )
@@ -732,7 +729,7 @@ function Workbench() {
     },
     { label: "復原", run: ws.undo },
     { label: "重作", run: ws.redo },
-    { label: "匯出本白板", run: () => ws.backup() },
+    { label: "資料與備份", run: () => setSettings(true) },
   ];
   return (
     <CanvasContext.Provider
@@ -745,8 +742,31 @@ function Workbench() {
         toggle,
         unpin,
         notify,
+        beginGesture: ws.beginGesture,
+        endGesture: ws.endGesture,
+        guideEntryId: board.guide?.entryId,
+        guideBackupId: board.guide?.backupId,
+        lastBoard: ws.lastBoard?.name,
+        resume: () => ws.lastBoard && void ws.open(ws.lastBoard.boardId),
+        createBoard: () => void ws.add(),
+        dataSettings: () => setSettings(true),
       }}
     >
+      {settings && (
+        <DataSettings
+          close={() => setSettings(false)}
+          backup={ws.backup}
+          restore={fileImport}
+          status={ws.status}
+          error={ws.error}
+          lastSaved={ws.lastSaved}
+          lastBackup={ws.lastBackup}
+          name={board.name}
+          notify={notify}
+          help={() => setHelp(true)}
+          reset={board.guide ? () => setResetGuide(true) : undefined}
+        />
+      )}
       {resetGuide && (
         <div className="modal-backdrop">
           <div className="modal" role="dialog" aria-label="確認重設指南">
@@ -780,7 +800,13 @@ function Workbench() {
           </div>
         </div>
       )}
-      <div className={`workbench ${sidebar ? "with-sidebar" : ""}`}>
+      <div
+        className={`workbench ${sidebar ? "with-sidebar" : ""}`}
+        data-save-state={ws.status}
+      >
+        <span className="save-status visually-hidden" aria-hidden="true">
+          {online ? ws.status : "離線 · " + ws.status}
+        </span>
         {sidebar && (
           <Sidebar
             prefs={ws.prefs}
@@ -801,29 +827,28 @@ function Workbench() {
             onDuplicate={(bid) => void ws.duplicate(bid)}
             onDelete={setDeleteBoard}
             onClose={() => setSidebar(false)}
-            onBackup={() => void ws.backup(true)}
-            onImport={fileImport}
           />
         )}
         <main className="main">
           <header className="topbar">
             <div className="board-title">
-              {!sidebar && (
-                <button
-                  aria-label="展開白板清單"
-                  onClick={() => setSidebar(true)}
-                >
-                  <PanelLeftOpen size={19} />
-                </button>
-              )}
+              <button
+                aria-label={sidebar ? "收合白板清單" : "展開白板清單"}
+                onClick={() => setSidebar(!sidebar)}
+              >
+                <PanelLeftOpen size={22} />
+              </button>
               <div className="header-brand">
                 <img
                   src={`${import.meta.env.BASE_URL}icon.svg`}
                   alt="PD-1 Center Logo"
                 />
-                <strong>PD-1 Center | Mind Canvas</strong>
+                <strong>
+                  <span className="brand-parent">PD-1 Center | </span>Mind
+                  Canvas
+                </strong>
               </div>
-              <h1>{board.name}</h1>
+              <h1 hidden={!!board.guide}>{board.name}</h1>
             </div>
             <div className="top-actions">
               {updateAvailable && (
@@ -839,159 +864,32 @@ function Workbench() {
                   載入新版
                 </button>
               )}
-              <span className={`save-status ${ws.error ? "failed" : ""}`}>
-                <span className="status-dot" />
-                {online ? ws.status : "離線 · " + ws.status}
-              </span>
               <button
                 aria-label="尋找節點與快速命令"
-                title="尋找節點與快速命令 /"
                 onClick={() => {
                   setQuery("");
                   setCommand(true);
                 }}
               >
-                <Search size={18} />
+                <Search size={22} />
               </button>
-              <button
-                aria-label="匯出本白板"
-                title="匯出本白板 JSON"
-                onClick={() => void ws.backup()}
-              >
-                <Download size={18} />
-              </button>
-              <button
-                aria-label="匯入專案"
-                title="匯入 JSON 專案"
-                onClick={fileImport}
-              >
-                <Upload size={18} />
-              </button>
-              <span className="divider" />
               <button
                 aria-label={dark ? "切換淺色主題" : "切換深色主題"}
                 onClick={() => setDark(!dark)}
               >
-                {dark ? <Sun size={18} /> : <Moon size={18} />}
+                {dark ? <Sun size={22} /> : <Moon size={22} />}
               </button>
               <button
-                aria-label="開啟歡迎指南"
-                title="開啟歡迎指南"
-                onClick={() => void ws.createGuide()}
+                aria-label="設定"
+                title="設定 · 資料與備份"
+                onClick={() => setSettings(true)}
               >
-                指南
-              </button>
-              {board.guide && (
-                <button
-                  aria-label="重設指南"
-                  onClick={() => setResetGuide(true)}
-                >
-                  重設
-                </button>
-              )}
-              <button
-                aria-label="保留本機儲存"
-                title="要求瀏覽器保留儲存（仍須備份）"
-                onClick={() => void requestPersistence().then(notify)}
-              >
-                <Pin size={17} />
-              </button>
-              <button aria-label="操作說明" onClick={() => setHelp(true)}>
-                <HelpCircle size={18} />
+                <Settings2 size={22} />
               </button>
             </div>
           </header>
-          {board.guide && (
-            <section
-              className={`welcome-entry ${exploringGuide ? "exploring" : ""}`}
-              aria-label="歡迎入口"
-            >
-              {exploringGuide ? (
-                <>
-                  <button onClick={() => setExploringGuide(false)}>
-                    回到歡迎入口
-                  </button>
-                  <span>試著拖曳或雙擊便條，滾輪可探索其他區域。</span>
-                </>
-              ) : (
-                <>
-                  <div>
-                    <strong>從這裡開始你的思考</strong>
-                    <p>白板還在目前瀏覽器裡。選一個入口，就能繼續。</p>
-                  </div>
-                  <div className="welcome-actions">
-                    {ws.lastBoard && (
-                      <button
-                        className="continue-board"
-                        onClick={() => void ws.open(ws.lastBoard!.boardId)}
-                      >
-                        <span>繼續上次的白板</span>
-                        <strong>{ws.lastBoard.name}</strong>
-                      </button>
-                    )}
-                    <button
-                      onClick={() => {
-                        void ws.add();
-                        if (window.innerWidth <= 760) setSidebar(false);
-                      }}
-                    >
-                      建立新白板
-                    </button>
-                    <button
-                      onClick={() => {
-                        setExploringGuide(true);
-                        if (window.innerWidth <= 760) setSidebar(false);
-                        requestAnimationFrame(() =>
-                          requestAnimationFrame(() => {
-                            const area = document
-                              .querySelector(".canvas-surface")
-                              ?.getBoundingClientRect();
-                            const examples = board.nodes.filter(
-                              (n) =>
-                                n.position.x === 0 &&
-                                n.position.y >= 205 &&
-                                n.position.y < 580,
-                            );
-                            if (!area || !examples.length) return;
-                            const left = Math.min(
-                              ...examples.map((n) => n.position.x),
-                            );
-                            const top = Math.min(
-                              ...examples.map((n) => n.position.y),
-                            );
-                            const width =
-                              Math.max(
-                                ...examples.map((n) => n.position.x + n.width),
-                              ) - left;
-                            const height =
-                              Math.max(
-                                ...examples.map((n) => n.position.y + n.height),
-                              ) - top;
-                            const zoom = Math.max(
-                              0.1,
-                              Math.min(
-                                1,
-                                (area.width - 32) / width,
-                                (area.height - 300) / height,
-                              ),
-                            );
-                            void rf.setViewport(
-                              { x: 16 - left * zoom, y: 16 - top * zoom, zoom },
-                              { duration: 250 },
-                            );
-                          }),
-                        );
-                      }}
-                    >
-                      探索使用指南
-                    </button>
-                  </div>
-                </>
-              )}
-            </section>
-          )}
           <div
-            className="canvas-surface"
+            className={`canvas-surface ${board.guide ? "guide-document" : ""}`}
             tabIndex={-1}
             aria-label="自由思維畫布"
           >

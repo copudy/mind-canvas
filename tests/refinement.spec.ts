@@ -1,10 +1,11 @@
+import { waitSaved, dataAction, enterGuide, locate } from "./ui";
 import { test, expect, chromium, type Page } from "@playwright/test";
 import { makeBoard, makeItem } from "../src/model";
 import { greetings } from "../src/guide";
 const base = "http://127.0.0.1:4173";
 async function ready(page: Page) {
   await page.goto(base);
-  await expect(page.getByText("已儲存於此裝置", { exact: true })).toBeVisible();
+  await waitSaved(page);
 }
 async function boards(page: Page): Promise<any[]> {
   return page.evaluate(async () => {
@@ -20,8 +21,7 @@ async function boards(page: Page): Promise<any[]> {
     return data;
   });
 }
-const saved = (page: Page) =>
-  expect(page.getByText("已儲存於此裝置", { exact: true })).toBeVisible();
+const saved = (page: Page) => waitSaved(page);
 const item = (page: Page, text: string) =>
   page.locator(".react-flow__node").filter({
     has: page
@@ -32,7 +32,7 @@ test("brand assets title tokens and unobstructed bottom library", async ({
   page,
 }) => {
   await ready(page);
-  await expect(page).toHaveTitle("PD-1 Center | Mind Canvas");
+  await expect(page).toHaveTitle("Mind Canvas");
   await expect(page.locator(".header-brand")).toHaveText(
     "PD-1 Center | Mind Canvas",
   );
@@ -69,18 +69,18 @@ test("brand assets title tokens and unobstructed bottom library", async ({
   const library = await page.locator(".tool-library").boundingBox();
   const canvas = await page.locator(".canvas-surface").boundingBox();
   const minimap = await page.locator(".react-flow__minimap").boundingBox();
-  expect(library!.height).toBe(120);
+  expect(library!.height).toBe(148);
   expect(library!.y).toBeGreaterThan(canvas!.y + canvas!.height / 2);
-  expect(library!.x + library!.width).toBeLessThan(minimap!.x);
+  expect(minimap!.y + minimap!.height).toBeLessThan(library!.y);
   const buttons = await page.locator(".library-tools button").all();
   for (const b of buttons) {
     const r = await b.boundingBox();
-    expect(r!.width).toBe(100);
-    expect(r!.height).toBe(62);
+    expect(r!.width).toBe(112);
+    expect(r!.height).toBe(80);
   }
   await page.screenshot({ path: "artifacts/welcome.png" });
   await page.getByRole("button", { name: "收合工具庫" }).click();
-  expect((await page.locator(".tool-library").boundingBox())!.height).toBe(34);
+  expect((await page.locator(".tool-library").boundingBox())!.height).toBe(36);
   await page.reload();
   await saved(page);
   await expect(page.getByRole("button", { name: "展開工具庫" })).toBeVisible();
@@ -117,10 +117,11 @@ test("guide initializes once greetings confined stable and editable branching", 
       .filter({ hasText: new RegExp(greetings.join("|")) })
       .innerText();
   const first = await greeting();
-  await page.getByRole("button", { name: "開啟歡迎指南", exact: true }).click();
+  await enterGuide(page);
   expect(await greeting()).toBe(first);
   await page.getByRole("tab", { name: "文字筆記", exact: true }).click();
   expect(await greeting()).toBe(first);
+  await locate(page, "旅行計畫");
   await item(page, "旅行計畫").click();
   await page.keyboard.press("Tab");
   const editor = page.getByRole("textbox", { name: "編輯節點文字" });
@@ -135,7 +136,8 @@ test("guide initializes once greetings confined stable and editable branching", 
   await expect(page.locator("h1")).toHaveText("歡迎使用 Mind Canvas");
   await page.getByRole("button", { name: /繼續上次的白板/ }).click();
   await expect(page.locator(".board-row.active")).toContainText("新的白板");
-  await page.getByRole("button", { name: "開啟歡迎指南" }).click();
+  await enterGuide(page);
+  await locate(page, "指南可互動");
   await expect(item(page, "指南可互動")).toBeVisible();
   const second = await greeting();
   expect(second).not.toBe(first);
@@ -143,16 +145,18 @@ test("guide initializes once greetings confined stable and editable branching", 
   expect(await greeting()).toBe(second);
   data = await boards(page);
   expect(data.filter((b) => b.guide)).toHaveLength(1);
-  await page.getByRole("button", { name: "重設指南", exact: true }).click();
+  await dataAction(page, "重設指南");
   await page.getByRole("button", { name: "取消", exact: true }).click();
+  await locate(page, "指南可互動");
   await expect(item(page, "指南可互動")).toBeVisible();
-  await page.getByRole("button", { name: "重設指南", exact: true }).click();
+  await dataAction(page, "重設指南");
   await page.getByRole("button", { name: "確認重設", exact: true }).click();
   await saved(page);
   await expect(item(page, "指南可互動")).toHaveCount(0);
   await page.locator(".canvas-surface").focus();
   await page.keyboard.press("Control+z");
   await saved(page);
+  await locate(page, "指南可互動");
   await expect(item(page, "指南可互動")).toBeVisible();
   expect(
     (await boards(page)).find((b) => b.name === "新的白板").nodes,
@@ -183,9 +187,9 @@ test("existing data untouched automatic welcome guide and guide creation idempot
   await saved(page);
   expect((await boards(page)).find((x) => x.boardId === b.boardId)).toEqual(b);
   await expect(page.locator("h1")).toHaveText("歡迎使用 Mind Canvas");
-  await page.getByRole("button", { name: "開啟歡迎指南" }).click();
+  await enterGuide(page);
   await saved(page);
-  await page.getByRole("button", { name: "開啟歡迎指南" }).click();
+  await enterGuide(page);
   await saved(page);
   const data = await boards(page);
   expect(data).toHaveLength(2);
@@ -293,7 +297,7 @@ for (const mode of ["granted", "denied", "unsupported", "throws"])
       });
     }, mode);
     await ready(page);
-    await page.getByRole("button", { name: "保留本機儲存" }).click();
+    await dataAction(page, "保留本機儲存");
     await expect(page.locator(".toast")).toContainText(
       mode === "granted"
         ? "不是永久保存"
@@ -342,13 +346,14 @@ test("JSON browser roundtrip preserves every guide object field and calculator w
   page,
 }) => {
   await ready(page);
+  await locate(page, "旅行預算");
   const calc = page.getByRole("textbox", { name: "計算機算式" });
   await calc.fill("0.1+0.2");
   await calc.press("Enter");
   await saved(page);
   const before = (await boards(page))[0];
   const download = page.waitForEvent("download");
-  await page.getByRole("button", { name: "匯出本白板", exact: true }).click();
+  await dataAction(page, "匯出本白板");
   const path = await (await download).path();
   await page.locator("input[type=file]").setInputFiles(path!);
   await saved(page);

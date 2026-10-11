@@ -15,3 +15,5 @@ if ("serviceWorker" in navigator && import.meta.env.PROD)
   );
 
 import "./design-tokens.css";
+
+import "./workspace-ui.css";

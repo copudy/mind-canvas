@@ -1,6 +1,6 @@
+import { waitSaved, dataAction, enterGuide, locate } from "./ui";
 import { test, expect, type Page } from "@playwright/test";
-const saved = (p: Page) =>
-  expect(p.getByText("已儲存於此裝置", { exact: true })).toBeVisible();
+const saved = (p: Page) => waitSaved(p);
 async function state(p: Page) {
   return p.evaluate(async () => {
     const db = await new Promise<IDBDatabase>((r) => {
@@ -55,9 +55,11 @@ test("welcome startup refresh internal switching and last-opened independent of 
   await expect(
     page.getByRole("button", { name: /繼續上次的白板/ }),
   ).toHaveCount(0);
-  await page.getByRole("button", { name: "探索使用指南", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "探索使用指南", exact: true }),
+  ).toHaveCount(0);
   await expect(page.locator("h1")).toHaveText("歡迎使用 Mind Canvas");
-  await page.getByRole("button", { name: "回到歡迎入口", exact: true }).click();
+
   await page.getByRole("button", { name: "建立新白板", exact: true }).click();
   await rename(page, "新的白板", "A 最近編輯");
   await create(page, "B 最後開啟");
@@ -69,7 +71,7 @@ test("welcome startup refresh internal switching and last-opened independent of 
   await page.getByRole("button", { name: /B 最後開啟.*0 個想法/ }).click();
   await page.getByRole("button", { name: "Zoom In", exact: true }).click();
   await saved(page);
-  await page.getByRole("button", { name: "開啟歡迎指南", exact: true }).click();
+  await enterGuide(page);
   const x = await state(page);
   expect(x.prefs.lastOpened).toBe(before.boardId);
   expect(
@@ -182,7 +184,7 @@ for (const width of [1440, 390, 320])
     ).toBeVisible();
     await expect(
       page.getByRole("button", { name: "探索使用指南", exact: true }),
-    ).toBeVisible();
+    ).toHaveCount(0);
     const sizes = await page.evaluate(() => ({
       overflow: document.documentElement.scrollWidth > innerWidth,
       body: getComputedStyle(document.body).fontSize,
@@ -199,23 +201,13 @@ for (const width of [1440, 390, 320])
     expect(parseFloat(sizes.tool)).toBeGreaterThanOrEqual(13);
     expect(parseFloat(sizes.tab)).toBeGreaterThanOrEqual(13);
     expect(Number(sizes.zoom)).toBe(1);
-    expect(sizes.icon).toBe(20);
+    expect(sizes.icon).toBe(22);
     const lib = (await page.locator(".tool-library").boundingBox())!,
       mini = (await page.locator(".react-flow__minimap").boundingBox())!;
     expect(lib.x).toBeGreaterThanOrEqual(0);
     expect(lib.x + lib.width).toBeLessThanOrEqual(width);
     if (width < 760) expect(mini.y + mini.height).toBeLessThan(lib.y);
     await page.screenshot({ path: `artifacts/ux-${width}.png` });
-    await page
-      .getByRole("button", { name: "探索使用指南", exact: true })
-      .click();
-    await expect
-      .poll(
-        async () =>
-          (await state(page)).boards.find((b: any) => b.guide).viewport.zoom,
-      )
-      .toBeGreaterThan(0.7);
-    await saved(page);
     await page.screenshot({ path: `artifacts/ux-explore-${width}.png` });
   });
 

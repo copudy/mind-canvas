@@ -1,9 +1,17 @@
 /* PD-1 Center globals.css / Header.tsx · 官方主色及字體，工作區採獨立淺色 */
 :root {
-  --ui-size: 14px;
+  --ui-size: 15px;
   --ui-small: 13px;
-  --tool-label-size: 13px;
-  --tap-size: 40px;
+  --tool-label-size: 14px;
+  --tap-size: 44px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --radius-control: 8px;
+  --library-height: 148px;
+  --header-height: 68px;
   --brand-background: #0a0e17;
   --brand-surface: #111827;
   --brand-elevated: #1a2235;

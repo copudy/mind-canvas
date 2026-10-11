@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { clone, makeBoard, id, type Board } from "./model";
-import { welcomeBoard, refreshGreeting } from "./guide";
+import { welcomeBoard, refreshGreeting, arrangeGuide } from "./guide";
 import { History } from "./history";
 import { repository, exportProject, importProject } from "./storage";
 import {
@@ -42,6 +42,7 @@ async function initialize() {
       "白板管理設定儲存失敗；本次釘選、區段與上次開啟紀錄可能無法保留。";
   }
   const guide = boards.find((b) => b.guide)!;
+  arrangeGuide(guide);
   refreshGreeting(guide);
   try {
     await repository.save(guide);
@@ -56,6 +57,9 @@ export function useWorkspace() {
   const prefsQueue = useRef(Promise.resolve());
   const [prefsError, setPrefsError] = useState("");
   const prefsPending = useRef(0);
+  const gesture = useRef(false);
+  const [lastSaved, setLastSaved] = useState(0),
+    [lastBackup, setLastBackup] = useState(0);
   const [boards, setBoards] = useState<Board[]>([]),
     [board, setBoard] = useState<Board | null>(null),
     [status, setStatus] = useState("正在載入…"),
@@ -83,7 +87,8 @@ export function useWorkspace() {
     queue.current = queue.current
       .catch(() => {})
       .then(() => repository.save(b))
-      .then(() => {
+      .then((stamp) => {
+        if (current.current?.boardId === b.boardId) setLastSaved(stamp);
         failed.current.delete(b.boardId);
         if (rev === revision.current) {
           if (failed.current.size) {
@@ -115,13 +120,14 @@ export function useWorkspace() {
     }
     return Promise.all([queue.current, prefsQueue.current]).then(() => {});
   };
-  const schedule = (b: Board) => {
+  const schedule = (b: Board, content = true) => {
     // A completed older write must never announce a newer edit as saved.
     revision.current++;
     setStatus("尚未儲存");
     pending.current = clone(b);
     if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(flush, 400);
+    if (!gesture.current)
+      timer.current = setTimeout(flush, content ? 800 : 1600);
   };
   useEffect(() => {
     let alive = true;
@@ -136,6 +142,16 @@ export function useWorkspace() {
         setPrefsError(prefsWarning);
         unsaved.forEach((b) => failed.current.set(b.boardId, b));
         sync(boards.find((b) => b.boardId === guideId)!);
+        void repository
+          .savedAt(guideId)
+          .then((stamp) => {
+            if (current.current?.boardId === guideId) setLastSaved(stamp);
+          })
+          .catch(() => {});
+        void repository
+          .backupAt()
+          .then(setLastBackup)
+          .catch(() => {});
         setStatus(unsaved.length ? "儲存失敗" : "已儲存於此裝置");
         if (unsaved.length)
           setError(
@@ -185,6 +201,8 @@ export function useWorkspace() {
   const changePrefs = (fn: (p: WorkspacePrefs) => void) => {
     const next = clone(prefsRef.current);
     fn(next);
+    if (JSON.stringify(next) === JSON.stringify(prefsRef.current))
+      return prefsQueue.current;
     prefsRef.current = next;
     setPrefs(next);
     prefsPending.current++;
@@ -222,12 +240,13 @@ export function useWorkspace() {
     contentChange = true,
   ) => {
     if (!current.current) return;
-    if (record) checkpoint();
     const next = clone(current.current);
     fn(next);
+    if (JSON.stringify(next) === JSON.stringify(current.current)) return;
+    if (record) checkpoint();
     if (contentChange) next.updatedAt = Date.now();
     sync(next);
-    schedule(next);
+    schedule(next, contentChange);
   };
   const undo = () => {
     if (!current.current) return;
@@ -253,6 +272,7 @@ export function useWorkspace() {
     const b = all.current.find((b) => b.boardId === bid);
     if (b) {
       sync(clone(b));
+      setLastSaved(await repository.savedAt(bid).catch(() => 0));
       if (!b.guide) await remember(bid);
     }
   };
@@ -316,6 +336,13 @@ export function useWorkspace() {
     a.href = url;
     a.download = `mind-canvas-${whole ? "workspace" : current.current!.name}.json`;
     a.click();
+    const stamp = Date.now();
+    try {
+      await repository.backupAt(stamp);
+      setLastBackup(stamp);
+    } catch {
+      setPrefsError("備份資訊保存失敗；JSON 匯出已發起，請確認下載檔案。");
+    }
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
   const restore = async (file: File) => {
@@ -323,9 +350,10 @@ export function useWorkspace() {
       if (file.size > 20_000_000) throw new Error("檔案超過 20 MB");
       const imported = importProject(await file.text());
       await flush();
-      await repository.saveMany(imported);
+      const stamp = await repository.saveMany(imported);
       all.current.push(...imported);
       sync(imported[0]);
+      setLastSaved(stamp);
       await remember(imported[0].boardId);
       if (failed.current.size) {
         setStatus("儲存失敗");
@@ -341,6 +369,16 @@ export function useWorkspace() {
     }
   };
   return {
+    lastSaved,
+    lastBackup,
+    beginGesture: () => {
+      gesture.current = true;
+      if (timer.current) clearTimeout(timer.current);
+    },
+    endGesture: () => {
+      gesture.current = false;
+      if (pending.current) timer.current = setTimeout(flush, 250);
+    },
     prefs,
     lastBoard: boards.find((b) => b.boardId === prefs.lastOpened && !b.guide),
     togglePin: (bid: string) =>

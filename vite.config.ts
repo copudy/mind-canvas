@@ -58,6 +58,7 @@ export default defineConfig({
         ],
       },
       workbox: {
+        ignoreURLParametersMatching: [/^utm_/, /^fbclid$/, /^v$/],
         clientsClaim: true,
         skipWaiting: true,
         globPatterns: ["**/*.{js,css,html,svg,png,woff2,txt}"],

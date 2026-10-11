@@ -14,9 +14,10 @@ const db = () =>
 export const repository = {
   async workspacePrefs(value?: unknown) {
     const d = await db();
-    if (value !== undefined) await d.put("meta", JSON.stringify(value), "workspace-v1");
+    if (value !== undefined)
+      await d.put("meta", JSON.stringify(value), "workspace-v1");
     const raw = await d.get("meta", "workspace-v1");
-    return raw ? JSON.parse(raw) as unknown : undefined;
+    return raw ? (JSON.parse(raw) as unknown) : undefined;
   },
   async list() {
     return (await (await db()).getAll("boards")).sort(
@@ -25,16 +26,34 @@ export const repository = {
   },
   async save(board: Board) {
     const d = await db(),
-      tx = d.transaction("boards", "readwrite");
-    await tx.store.put(clone(board));
+      tx = d.transaction(["boards", "meta"], "readwrite"),
+      stamp = Date.now();
+    await tx.objectStore("boards").put(clone(board));
+    await tx.objectStore("meta").put(String(stamp), "saved-" + board.boardId);
     await tx.done;
+    return stamp;
+  },
+  async savedAt(bid: string) {
+    return Number(await (await db()).get("meta", "saved-" + bid)) || 0;
+  },
+  async backupAt(stamp?: number) {
+    const d = await db();
+    if (stamp) await d.put("meta", String(stamp), "backup-at");
+    return Number(await d.get("meta", "backup-at")) || 0;
   },
   async saveMany(boards: Board[]) {
     const d = await db(),
-      tx = d.transaction("boards", "readwrite");
+      tx = d.transaction(["boards", "meta"], "readwrite"),
+      stamp = Date.now();
     try {
-      for (const board of boards) await tx.store.put(clone(board));
+      for (const board of boards) {
+        await tx.objectStore("boards").put(clone(board));
+        await tx
+          .objectStore("meta")
+          .put(String(stamp), "saved-" + board.boardId);
+      }
       await tx.done;
+      return stamp;
     } catch (error) {
       try {
         tx.abort();
@@ -183,6 +202,14 @@ export function validateBoard(raw: unknown): Board {
       !nodes.some((n) => n.id === guide.greetingId && n.kind === "text"))
   )
     throw new Error("指南資訊無效");
+  if (object(guide))
+    for (const key of ["entryId", "backupId"] as const)
+      if (
+        guide[key] !== undefined &&
+        (!str(guide[key], 100) ||
+          !nodes.some((n) => n.id === guide[key] && n.kind === "text"))
+      )
+        throw new Error("指南操作入口無效");
   return {
     ...(raw.guide ? { guide: clone(raw.guide) as Board["guide"] } : {}),
     schemaVersion: 1,

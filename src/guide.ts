@@ -148,5 +148,147 @@ export function welcomeBoard(): Board {
   b.guide = { version: 1, greetingId: greeting.id };
   // Keep the lower teaching areas clear of the larger, readable calculator.
   for (const n of b.nodes) if (n.position.y >= 645) n.position.y += 100;
+  arrangeGuide(b);
   return refreshGreeting(b);
+}
+
+/** Non-destructive one-time guide presentation upgrade: retain content and stable IDs. */
+export function arrangeGuide(b: Board) {
+  if (!b.guide) return;
+  if (b.guide.entryId) {
+    compactGuideHero(b);
+    return;
+  }
+  const locations: Record<string, [number, number, number, number]> = {
+    "歡迎來到 Mind Canvas": [0, 0, 320, 120],
+    "01 先動手玩一下": [460, 0, 380, 50],
+    "02 讓想法長出分支": [0, 540, 430, 50],
+    旅行計畫: [0, 625, 155, 60],
+    想去的地方: [230, 600, 200, 60],
+    預算與準備: [230, 710, 200, 60],
+    "03 把數字也放進思考": [510, 540, 400, 50],
+    旅行預算: [510, 600, 340, 450],
+    "04 自由串起一個流程": [0, 1110, 400, 50],
+    蒐集靈感: [0, 1190, 180, 65],
+    安排下一步: [250, 1190, 180, 65],
+    動手完成: [500, 1190, 180, 65],
+    "05 保存，並留下備份": [0, 1440, 400, 50],
+    "06 從生活中的小問題開始": [0, 1930, 430, 50],
+  };
+  for (const n of b.nodes) {
+    const l = locations[n.text];
+    if (l) {
+      n.position = { x: l[0], y: l[1] };
+      n.width = l[2];
+      n.height = l[3];
+      n.maxWidth = l[2];
+    }
+    if (n.id === b.guide.greetingId) {
+      n.position = { x: 0, y: 130 };
+      n.width = 320;
+      n.height = 100;
+      n.maxWidth = 320;
+    }
+    if (n.text.startsWith("PD-1 Center 的")) {
+      n.position = { x: 0, y: 240 };
+      n.width = 320;
+      n.height = 95;
+    }
+    if (n.text.startsWith("試著拖動我")) {
+      n.position = { x: 460, y: 75 };
+      n.width = 380;
+      n.height = 155;
+    }
+    if (n.text.startsWith("空白處拖曳")) {
+      n.position = { x: 460, y: 255 };
+      n.width = 380;
+      n.height = 210;
+    }
+    if (n.text.startsWith("選取「旅行計畫」")) {
+      n.position = { x: 0, y: 810 };
+      n.width = 430;
+      n.height = 200;
+    }
+    if (n.text.startsWith("流程是可編輯")) {
+      n.position = { x: 0, y: 1290 };
+      n.width = 690;
+      n.height = 125;
+    }
+    if (
+      n.text ===
+      "左側「新的白板」開始自己的計畫。\n點白板名稱即可切換，自動保存各自內容與視角。\n上方匯出 JSON；匯入會建立新白板，不覆蓋原資料。\n計算機的算式、結果、大小與位置也會備份。"
+    ) {
+      n.position = { x: 0, y: 1510 };
+      n.width = 430;
+      n.height = 240;
+      n.text =
+        "白板會自動保存於目前瀏覽器的 IndexedDB。\n重要修改後、換裝置前，請先備份。\n設定 → 資料與備份 → 匯出本白板／全部備份。\n在另一個瀏覽器用同一處的「匯入專案」還原。\n匯入會建立副本，不覆寫原白板。\n計算機算式、結果、大小與位置也會保存。";
+    }
+    if (n.text.startsWith("資料保存在目前")) {
+      n.position = { x: 510, y: 1510 };
+      n.width = 430;
+      n.height = 260;
+    }
+    if (n.text.startsWith("旅行：地點分支")) {
+      n.position = { x: 0, y: 2010 };
+      n.width = 600;
+      n.height = 150;
+    }
+  }
+  for (const n of b.nodes) if (n.position.y >= 540) n.position.y += 140;
+  const entry = makeItem(
+    "text",
+    { x: 0, y: 350 },
+    "選一個入口，開始今天的思考。",
+  );
+  Object.assign(entry, {
+    width: 320,
+    height: 240,
+    maxWidth: 320,
+    autoSize: false,
+  });
+  b.nodes.push(entry);
+  b.guide.entryId = entry.id;
+  const backup = makeItem(
+    "text",
+    { x: 0, y: 1940 },
+    "需要備份或搬到另一個裝置？",
+  );
+  Object.assign(backup, {
+    width: 430,
+    height: 95,
+    maxWidth: 430,
+    autoSize: false,
+  });
+  b.nodes.push(backup);
+  b.guide.backupId = backup.id;
+  b.viewport = { x: 24, y: 24, zoom: 1 };
+  compactGuideHero(b);
+}
+
+function compactGuideHero(b: Board) {
+  const entry = b.nodes.find((n) => n.id === b.guide?.entryId);
+  // Upgrade only the untouched standard hero; preserve manually moved entries.
+  if (
+    !entry ||
+    entry.position.x !== 0 ||
+    entry.position.y !== 350 ||
+    entry.height !== 240
+  )
+    return;
+  entry.position.y = 200;
+  entry.height = 220;
+  for (const n of b.nodes) {
+    if (n.text === "歡迎來到 Mind Canvas") {
+      n.height = 105;
+      if (n.fontSize === 34) n.fontSize = 30;
+    }
+    if (n.id === b.guide?.greetingId) {
+      n.position.y = 110;
+      n.height = 80;
+      if (n.fontSize === 20) n.fontSize = 18;
+    }
+    if (n.text.startsWith("PD-1 Center 的") && n.position.y === 240)
+      n.position.y = 440;
+  }
 }

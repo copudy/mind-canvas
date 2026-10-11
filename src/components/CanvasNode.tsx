@@ -32,6 +32,14 @@ export interface CanvasActions {
   toggle: (id: string) => void;
   unpin: (id: string) => void;
   notify: (message: string) => void;
+  beginGesture: () => void;
+  endGesture: () => void;
+  guideEntryId?: string;
+  guideBackupId?: string;
+  lastBoard?: string;
+  resume: () => void;
+  createBoard: () => void;
+  dataSettings: () => void;
 }
 export const CanvasContext = createContext<CanvasActions>(null!);
 export type FlowNode = Node<{ item: Item; mountPreview?: string }, "canvas">;
@@ -222,7 +230,7 @@ export default function CanvasNode({
   };
   return (
     <div
-      className={`canvas-item ${item.kind} ${selected ? "is-selected" : ""} ${data.mountPreview ? "mount-preview" : ""}`}
+      className={`canvas-item ${item.kind} ${id === actions.guideEntryId || id === actions.guideBackupId ? "guide-entry-node" : ""} ${selected ? "is-selected" : ""} ${data.mountPreview ? "mount-preview" : ""}`}
       style={style}
     >
       <NodeResizer
@@ -231,7 +239,11 @@ export default function CanvasNode({
         minHeight={item.kind === "calculator" ? 335 : 40}
         maxWidth={3000}
         maxHeight={3000}
-        onResizeStart={actions.checkpoint}
+        onResizeStart={() => {
+          actions.checkpoint();
+          actions.beginGesture();
+        }}
+        onResizeEnd={actions.endGesture}
         onResize={(_, p) =>
           actions.patch(
             id,
@@ -315,6 +327,29 @@ export default function CanvasNode({
           ) : (
             <ChevronDown size={13} />
           )}
+        </button>
+      )}
+      {id === actions.guideEntryId && (
+        <div
+          className="guide-actions nodrag nowheel"
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          {actions.lastBoard && (
+            <button onClick={actions.resume}>
+              <span>繼續上次的白板</span>
+              <strong>{actions.lastBoard}</strong>
+            </button>
+          )}
+          <button onClick={actions.createBoard}>建立新白板</button>
+        </div>
+      )}
+      {id === actions.guideBackupId && (
+        <button
+          className="guide-data-link nodrag"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={actions.dataSettings}
+        >
+          前往資料與備份
         </button>
       )}
       {item.mode === "Pinned" && (
