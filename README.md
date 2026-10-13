@@ -1,5 +1,7 @@
 # PD-1 Center | Mind Canvas
 
+**v1.3.0 發布候選**：Markdown 所見即所得、八方向縮放與外觀快捷列、清單項目連線、表格局部格式、Callout、精簡框架與正交路由。最新成果及限制見 [V13_REPORT.md](V13_REPORT.md)，正式部署結果見 [HANDOFF.md](HANDOFF.md)。新格式 JSON 版本 4 請以 v1.3 或更新版還原。下方保留舊版發布紀錄。
+
 正式已上線 **v1.2.0**：思考框架常用入口優先、游標用途與結構預覽；文字筆記新增圖示／表格，便條紙移至實用工具，新增可記記事的小日曆。新工具完整備份使用格式 3，請用新版還原。詳見 [V12_REPORT.md](V12_REPORT.md) 與 [部署狀態](DEPLOYMENT.md)。以下為前版歷史紀錄。
 
 正式已上線 **v1.1.1**：指南改為清楚的捲動文件、六章導覽與開始入口，不再提供指南副本。詳見 [V111_REPORT.md](V111_REPORT.md) 與 [部署狀態](DEPLOYMENT.md)。下方 v1.1.0 為前版紀錄，指南副本已移除。
@@ -12,7 +14,7 @@
 
 ## 本機啟動
 
-需要 Node.js 22.12+（本機驗證版本 24.14.1）、npm 與現代瀏覽器。
+需要 Node.js 24（本機驗證版本 24.14.1）、npm 與現代瀏覽器。
 
 Windows 可雙擊 START_PREVIEW.cmd，等待建置後開啟顯示的 4173 本機網址；保持該視窗開啟。也可使用下列命令。
 
@@ -32,7 +34,8 @@ npm.cmd run preview -- --port 4173 --strictPort
 
 ## 操作
 
-- 底部工具庫選擇分類並新增物件；雙擊或 F2 編輯文字，Ctrl+Enter 完成、Esc 取消。
+- 底部工具庫選擇分類並新增物件；雙擊或 F2 編輯文字，Ctrl+Enter／Esc 結束編輯；編輯內容可用 Ctrl+Z 復原。
+- 文字支援 Markdown 粗體、斜體、行內程式碼及清單；清單項目兩側可連線，↑↓ 調順序。選取物件後八方向調尺寸、快捷外觀或一鍵重設；表格先選儲存格／列／欄再改格式。
 - 空白處拖曳框選，Shift 點擊多選。中鍵或右鍵拖曳平移；滾輪／觸控板平移、Ctrl+滾輪或雙指縮放。
 - 選取心智圖：Tab 子節點、Enter 同層、Shift+Tab 提升、Space 收合／展開。普通拖曳移動整枝；按住 Alt 將節點中心放在另一節點內，依綠色預覽重新掛載。
 - 向右／左右／放射只整理所選心智圖。Auto 參與排版，Pinned／Free 保留位置；手動拖曳轉為 Free。
@@ -54,7 +57,7 @@ npm.cmd run test:e2e
 
 測試及限制見 TEST_REPORT.md，驗收清單見 ACCEPTANCE.md，開發恢復見 PROGRESS.md。
 
-完整第一次交付報告見 BUILD_REPORT.md。瀏覽器測試直接使用正式建置，先執行 build；使用已安裝 Edge（隔離測試資料），預覽 4173 與子目錄 4174 由測試設定啟動。29 個第三方套件授權文字在 public/THIRD_PARTY_NOTICES.txt；依賴更新後執行 `node scripts/licenses.mjs` 重新產生。
+完整第一次交付報告見 BUILD_REPORT.md。瀏覽器測試直接使用正式建置，先執行 build；使用已安裝 Edge（隔離測試資料），預覽 4173、子目錄 4174 與舊版升級 4175 由測試啟動。升級測試自動建置本機 v1.2.0 tag，需系統 tar；fixture 不提交。83 個 runtime 套件授權文字在 public/THIRD_PARTY_NOTICES.txt；依賴更新後執行 `node scripts/licenses.mjs` 重新產生。
 
 支援的瀏覽器可透過其安裝選項安裝此 PWA；實際作業系統安裝尚未驗證。manifest／圖示／離線重新開啟已實測。
 

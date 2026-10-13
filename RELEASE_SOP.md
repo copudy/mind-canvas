@@ -8,6 +8,7 @@
 
 ```powershell
 npm.cmd test
+npm.cmd run lint
 npm.cmd run build
 npm.cmd run test:e2e
 ```
@@ -21,6 +22,7 @@ npx.cmd playwright test --config playwright.production.config.ts
 ```
 
 7. 驗證指南、建立／編輯／切換、JSON副本還原、IndexedDB、刷新、SW範圍與離線寫入。OS安裝與實體手機另列手動驗證，不把Actions綠燈當成全部驗收。
+   v1.3 另驗證 workbench 的 data-version、Markdown、項目錨點、局部表格格式與 Callout。完整本機套件自動以本機 v1.2.0 tag 建置同 origin 升級 fixture，需要系統 tar；缺 tag 先正常 fetch tags。正式套件不以正式站建立舊版 fixture。新格式4先備份再考慮程式碼回復，不將舊版直接用於新內容。
 8. 更新 HANDOFF／DEPLOYMENT／TEST_REPORT，記錄Commit、Tag、Actions網址、測試及風險；文件提交不挪動發布Tag。正式與本機資料不共用，以JSON搬移。
 
 若失敗，保留失敗紀錄，先確認根因；不擅自重寫Git歷史、不以刪除資料或清理網站資料修復快取。回復部署須另取得授權，優先對既有良好版本手動重部署。

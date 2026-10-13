@@ -70,7 +70,8 @@ export default function DataSettings(p: Props) {
         <p>
           匯入 JSON
           會建立新白板，不覆寫既有資料。備份包含節點、連線、樣式、視角、計算機及圖示／表格／日曆；全部備份也包含我的範本。含新小工具的
-          JSON 格式為版本 3，請用 v1.2
+          JSON 格式為版本 3；含格式文字、Callout、項目連線或儲存格格式時使用版本
+          4，請用 v1.3
           或更新版本還原。側欄分類需在新裝置重新設定。本機與正式網址的儲存空間各自獨立，搬移時請匯出再匯入。
         </p>
         <button onClick={() => void requestPersistence().then(p.notify)}>

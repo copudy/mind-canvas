@@ -24,6 +24,17 @@ export default function RichView({
       return n.content?.some(walk) || false;
     };
     walk(next);
+    const prune = (n: RichNode) => {
+      n.content?.forEach(prune);
+      if (n.content)
+        n.content = n.content.filter(
+          (c) =>
+            !(c.type === "bulletList" || c.type === "orderedList") ||
+            !!c.content?.length,
+        );
+    };
+    prune(next);
+    if (!next.content?.length) next.content = [{ type: "paragraph" }];
     change(next);
   };
   const render = (n: RichNode, i: number): ReactNode => {
@@ -93,7 +104,14 @@ export default function RichView({
     if (n.type === "bulletList") return <ul key={i}>{content}</ul>;
     if (n.type === "orderedList")
       return (
-        <ol key={i} start={Number(n.attrs?.start) || 1}>
+        <ol
+          key={i}
+          start={Number(n.attrs?.start) || 1}
+          type={
+            (n.attrs?.type as "1" | "a" | "A" | "i" | "I" | undefined) ||
+            undefined
+          }
+        >
           {content}
         </ol>
       );

@@ -1,3 +1,4 @@
+import { version as appVersion } from "../package.json";
 import AppearanceBar from "./components/AppearanceBar";
 import { applyRich, listIds, listDoc, appearance } from "./rich";
 import { makeWidget, type Widget } from "./widgets";
@@ -260,7 +261,20 @@ function Workbench() {
           ].some((k) => k in p)
         )
           autosize(n);
-        if (n.parentId && n.mode === "Auto" && ("text" in p || "autoSize" in p))
+        if (
+          n.parentId &&
+          n.mode === "Auto" &&
+          [
+            "text",
+            "rich",
+            "fontSize",
+            "bold",
+            "italic",
+            "autoSize",
+            "width",
+            "height",
+          ].some((k) => k in p)
+        )
           layoutTree(
             b,
             n.parentId,
@@ -317,6 +331,8 @@ function Workbench() {
   const addWidget = (type: Widget["type"]) => {
     if (ws.current.current?.guide) return;
     const n = makeWidget(type, center());
+    if (window.innerWidth <= 760)
+      n.width = Math.min(n.width, window.innerWidth - 48);
     ws.update((b) => b.nodes.push(n));
     setSelected([n.id]);
     setSelectedEdge(null);
@@ -480,7 +496,13 @@ function Workbench() {
   const duplicate = () => {
     let added: string[] = [];
     ws.update((b) => {
-      added = duplicateItems(b, selected);
+      const originals = b.nodes.filter((n) => selected.includes(n.id));
+      const offset = originals.length
+        ? Math.max(...originals.map((n) => n.position.x + n.width)) -
+          Math.min(...originals.map((n) => n.position.x)) +
+          48
+        : 32;
+      added = duplicateItems(b, selected, offset);
     });
     setSelected(added);
   };
@@ -536,7 +558,13 @@ function Workbench() {
     notify("已整理這棵心智圖；自由與固定位置保持原位");
   };
   const addRelation = (source: string, target: string, c?: Connection) => {
-    if (source === target) return;
+    if (
+      source === target &&
+      (!c?.sourceHandle?.startsWith("item:") ||
+        !c?.targetHandle?.startsWith("item:") ||
+        c.sourceHandle.split(":")[1] === c.targetHandle.split(":")[1])
+    )
+      return;
     ws.update((b) => {
       if (
         !b.relations.some(
@@ -546,6 +574,10 @@ function Workbench() {
             r.sourceItem ===
               (c?.sourceHandle?.startsWith("item:")
                 ? c.sourceHandle.split(":")[1]
+                : undefined) &&
+            r.targetItem ===
+              (c?.targetHandle?.startsWith("item:")
+                ? c.targetHandle.split(":")[1]
                 : undefined),
         )
       )
@@ -759,10 +791,21 @@ function Workbench() {
     const keyboard = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
       if (
+        target.closest(".appearance-bar,.inspector") &&
+        (e.ctrlKey || e.metaKey) &&
+        e.key.toLowerCase() === "z" &&
+        !ws.isGesturing()
+      ) {
+        e.preventDefault();
+        e.shiftKey ? ws.redo() : ws.undo();
+        return;
+      }
+      if (
         target.closest(
           'input,textarea,select,[contenteditable="true"],.calculator,button',
         ) ||
         e.isComposing ||
+        !!editId ||
         help ||
         command ||
         settings ||
@@ -773,6 +816,7 @@ function Workbench() {
         resetGuide
       )
         return;
+      if (ws.isGesturing()) return;
       const ctrl = e.ctrlKey || e.metaKey;
       if (ctrl && ["z", "d", "c", "v"].includes(e.key.toLowerCase())) {
         e.preventDefault();
@@ -895,6 +939,12 @@ function Workbench() {
               ? prev
               : { ...prev, [id]: ys },
           ),
+        undo: () => {
+          if (!ws.isGesturing()) ws.undo();
+        },
+        redo: () => {
+          if (!ws.isGesturing()) ws.redo();
+        },
         readOnly: !!board.guide,
         practice: () => void ws.add(),
         editId,
@@ -981,6 +1031,7 @@ function Workbench() {
       )}
       <div
         className={`workbench ${sidebar ? "with-sidebar" : ""}`}
+        data-version={appVersion}
         data-save-state={ws.status}
       >
         <span className="save-status visually-hidden" aria-hidden="true">
@@ -1163,7 +1214,15 @@ function Workbench() {
                 onConnect={(c) => addRelation(c.source, c.target, c)}
                 connectionMode={ConnectionMode.Loose}
                 connectionLineType={ConnectionLineType.SmoothStep}
-                isValidConnection={(c) => c.source !== c.target}
+                isValidConnection={(c) =>
+                  c.source !== c.target ||
+                  !!(
+                    c.sourceHandle?.startsWith("item:") &&
+                    c.targetHandle?.startsWith("item:") &&
+                    c.sourceHandle.split(":")[1] !==
+                      c.targetHandle.split(":")[1]
+                  )
+                }
                 onNodeDragStart={startDrag}
                 onNodeDrag={moveDrag}
                 onNodeDragStop={stopDrag}
@@ -1363,6 +1422,16 @@ function Workbench() {
             {selectedItem && !editId && (
               <AppearanceBar
                 item={selectedItem}
+                reset={() =>
+                  ws.update((b) => {
+                    for (const n of b.nodes.filter((n) =>
+                      selected.includes(n.id),
+                    )) {
+                      Object.assign(n, appearance(n));
+                      autosize(n);
+                    }
+                  })
+                }
                 patch={(p) =>
                   ws.update((b) => {
                     for (const n of b.nodes.filter((n) =>

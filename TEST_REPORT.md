@@ -1,5 +1,11 @@
 # 第一次原型測試報告
 
+## v1.3.0 最終本機驗證（2026-10-13）
+
+A：74/74單元、型別／Lint、正式PWA Build、64/64完整瀏覽器（3.6分鐘）全部通過；本機正式驗證套件3/3，Markdown三輪6/6。包含離線首次編輯器、舊v1.2同origin SW升級後白板／自訂範本逐字段一致、JSON1～4及資料隔離。尚未正式部署；正式結果完成後追加於頂部。
+
+目前 v1.3.0 實測增量見本檔最後段與 V13_REPORT.md；正式結果完成後置於本檔頂部。下方為舊版歷程。
+
 ## v1.2.0 正式上線完成（最新，2026-10-12）
 
 依使用者本次明確授權完成工具排序、框架預覽、圖示／表格／小日曆与便條紙分類後直接部署。正式 https://copudy.github.io/mind-canvas/ ，公開 Repository https://github.com/copudy/mind-canvas 。main，annotated Tag v1.2.0，發布 Commit `f77b80fb63384aa88432eca5ecaf0f4abb9de11b`。Actions https://github.com/copudy/mind-canvas/actions/runs/38157425825 success，舊版本標記保留，不 Force Push。
@@ -192,3 +198,14 @@ Undo 僅本次執行，不跨刷新；物件剪貼簿為應用程式內緩衝。
 - E：真實手機硬體、OS實際PWA安裝、其他瀏覽器、儲存逐出／強殺／斷電、多分頁衝突、正式GitHub網址尚未驗證。
 
 管理偏好留於IndexedDB meta/workspace-v1，不含於現有JSON文件備份；跨網址匯入後需重新釘選與分類。未分類最近編輯與各自訂區段內都依內容時間排序，釘選只增加捷徑。沒有已知阻斷本次UX驗收的問題。完整逐項結果與操作見UX_REPORT.md。未推送或正式部署。
+# v1.3.0 測試增量（2026-10-13）
+
+A／實測：74/74單元、型別／Lint、正式PWA Build通過；完整63/63瀏覽器（3.6分鐘），Markdown貼上／鍵盤連續三輪6/6，額外離線首次lazy編輯器通過；本機正式套件3/3（12.6秒）。最新64項完整回歸與正式部署結果將補記於頂部。
+
+包括新尺寸／八向Pointer Capture、外觀Undo、Markdown格式／模擬composition／nativeUndo、清單項目連線排序刪除復原／JSON、表格範圍／列／欄格式／清除／Undo／JSON、Callout、精簡框架、觸控模擬與縮放。既有白板隔離／全部備份自訂範本／無資料上傳／視角合併／手勢結束儲存／故障警告／子路徑與離線仍通過。
+
+真正v1.2 tag client建立含原Markdown符號、表格與自訂範本的資料，同origin SW更新至1.3，所有非指南文件與範本逐字段保持原值。新備份4讀1～4，旧版拒絕4；DB仍1。rich schema拒絕非法結構、重複項目ID／缺失錨點／不安全屬性，表格越界樣式清理測試通過。新版依賴audit0告警。
+
+修正過的失敗如實保留於Git歷程：初始化focus／paste競態、編號清單type:null合法屬性驗證、舊選單測試需改為舊文件匯入驗證、批次重設各物件內容獨立。未跳過測試、刪除失敗測試或關閉型別檢查。
+
+E：實體IME／手機／OS安裝、真實儲存逐出／斷電／強殺未驗證；模擬composition不是實體輸入法驗收。Markdown官方Beta，僅已測子集；任意密集重疊布局零交叉不保證。

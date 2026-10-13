@@ -58,7 +58,7 @@ async function clickTool(page: Page, name: string) {
     釘選計算機: "實用工具",
     浮動計算機: "實用工具",
     建立關聯線: "連線關係",
-    新增心智圖節點: "思考框架",
+    新增心智圖節點: "文字筆記",
   };
   const toggle = page.getByRole("button", { name: "展開工具庫", exact: true });
   if (await toggle.isVisible()) await toggle.click();
@@ -69,7 +69,13 @@ async function clickTool(page: Page, name: string) {
       await page
         .getByRole("button", { name: "釘選浮動計算機", exact: true })
         .click();
-  } else await page.getByRole("button", { name, exact: true }).click();
+  } else
+    await page
+      .getByRole("button", {
+        name: name === "新增心智圖節點" ? "新增自由文字" : name,
+        exact: true,
+      })
+      .click();
 }
 const nodes = (page: Page) => page.locator(".react-flow__node");
 const node = (page: Page, text: string) =>
@@ -339,7 +345,7 @@ test("multi-selection, batch styles, copy paste and free relation independence",
   await node(page, "想去的地方").click();
   await node(page, "留一點空白").click({ modifiers: ["Shift"] });
   await expect(page.locator(".react-flow__node.selected")).toHaveCount(2);
-  await page.getByRole("button", { name: "背景 #fff1bf", exact: true }).click();
+  await page.getByLabel("快捷背景色", { exact: true }).fill("#fff1bf");
   await saved(page);
   let b = (await readBoards(page))[0];
   expect(
@@ -436,8 +442,11 @@ test("mobile viewport supports text editing and theme toggle", async ({
       };
       const a = luminance(getComputedStyle(el).color),
         b = luminance(
-          getComputedStyle(document.querySelector(".canvas-surface")!)
-            .backgroundColor,
+          getComputedStyle(el.closest(".canvas-item")!).backgroundColor ===
+            "rgba(0, 0, 0, 0)"
+            ? getComputedStyle(document.querySelector(".canvas-surface")!)
+                .backgroundColor
+            : getComputedStyle(el.closest(".canvas-item")!).backgroundColor,
         );
       return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
     });
@@ -755,6 +764,7 @@ test("final desktop prototype visual and connectors styles", async ({
 }) => {
   await ready(page);
   await node(page, "一場剛剛好的旅行").click();
+  await page.getByRole("button", { name: "進階設定", exact: true }).click();
   await page.getByRole("checkbox", { name: "父子線虛線", exact: true }).check();
   await saved(page);
   expect((await readBoards(page))[0].treeStyle.dashed).toBe(true);

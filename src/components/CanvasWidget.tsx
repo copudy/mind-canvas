@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { resizeTable, type CellStyle } from "../widgets";
 import type { Item } from "../model";
 import { calendarDays, dayKey, symbols, type Widget } from "../widgets";
@@ -7,19 +7,48 @@ export default function CanvasWidget({
   patch,
   checkpoint,
   edit,
+  undo,
+  redo,
 }: {
   item: Item;
   patch: (p: Partial<Item>, record?: boolean) => void;
   checkpoint: () => void;
   edit: () => void;
+  undo: () => void;
+  redo: () => void;
 }) {
   const [selectedCells, setCells] = useState<string[]>(["0:0"]);
   const anchor = useRef<[number, number]>([0, 0]);
+  const scrollTouch = useRef<{ x: number; y: number } | null>(null);
   const w = item.widget!;
+  const [rangeMode, setRangeMode] = useState(false);
+  useEffect(() => {
+    if (w.type !== "table") return;
+    const rows = w.cells.length,
+      cols = w.cells[0].length;
+    setCells((old) => {
+      const kept = old.filter((key) => {
+        const [r, c] = key.split(":").map(Number);
+        return r < rows && c < cols;
+      });
+      return kept.length ? kept : ["0:0"];
+    });
+    anchor.current = [
+      Math.min(anchor.current[0], rows - 1),
+      Math.min(anchor.current[1], cols - 1),
+    ];
+  }, [
+    w.type,
+    w.type === "table" ? w.cells.length : 0,
+    w.type === "table" ? w.cells[0].length : 0,
+  ]);
   const format = (style: CellStyle | null) => {
     if (w.type !== "table") return;
     const styles = { ...w.styles };
-    for (const key of selectedCells) {
+    for (const key of selectedCells.filter((key) => {
+      const [r, c] = key.split(":").map(Number);
+      return r < w.cells.length && c < w.cells[0].length;
+    })) {
       if (style) styles[key] = { ...styles[key], ...style };
       else delete styles[key];
     }
@@ -66,8 +95,40 @@ export default function CanvasWidget({
       </strong>
       <div
         className="widget-body nodrag nowheel"
-        onKeyDown={(e) => e.stopPropagation()}
-        onPointerDown={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          e.stopPropagation();
+          const target = e.target as HTMLElement;
+          const dataInput = target.matches("textarea,input:not([type=color])");
+          if (
+            (e.ctrlKey || e.metaKey) &&
+            e.key.toLowerCase() === "z" &&
+            !dataInput
+          ) {
+            e.preventDefault();
+            e.shiftKey ? redo() : undo();
+          }
+        }}
+        onPointerDown={(e) => {
+          e.stopPropagation();
+          if (e.pointerType === "touch" && e.isPrimary)
+            scrollTouch.current = { x: e.clientX, y: e.clientY };
+        }}
+        onPointerMove={(e) => {
+          if (e.pointerType !== "touch" || !scrollTouch.current) return;
+          const dx = e.clientX - scrollTouch.current.x,
+            dy = e.clientY - scrollTouch.current.y;
+          if (Math.abs(dx) + Math.abs(dy) > 4) {
+            e.currentTarget.scrollTop -= dy;
+            e.currentTarget.scrollLeft -= dx;
+            scrollTouch.current = { x: e.clientX, y: e.clientY };
+          }
+        }}
+        onPointerUp={() => {
+          scrollTouch.current = null;
+        }}
+        onPointerCancel={() => {
+          scrollTouch.current = null;
+        }}
         onDoubleClick={(e) => e.stopPropagation()}
       >
         {w.type === "icon" && (
@@ -146,7 +207,16 @@ export default function CanvasWidget({
                 I
               </button>
               <button onClick={() => format(null)}>清除格式</button>
-              <small>Shift 點擊框選範圍 · Ctrl 多選</small>
+              <button
+                aria-label="選取儲存格範圍"
+                aria-pressed={rangeMode}
+                onClick={() => setRangeMode(!rangeMode)}
+              >
+                範圍
+              </button>
+              <small>
+                已選 {selectedCells.length} 格 · Shift／範圍點選 · Ctrl 多選
+              </small>
             </div>
             <div className="widget-table-scroll">
               <table
@@ -223,7 +293,12 @@ export default function CanvasWidget({
                             aria-label={`表格第 ${i + 1} 列第 ${j + 1} 欄`}
                             value={cell}
                             onPointerDown={(e) =>
-                              select(i, j, e.shiftKey, e.ctrlKey || e.metaKey)
+                              select(
+                                i,
+                                j,
+                                e.shiftKey || rangeMode,
+                                e.ctrlKey || e.metaKey,
+                              )
                             }
                             style={{ textAlign: "inherit" }}
                             onFocus={() => {

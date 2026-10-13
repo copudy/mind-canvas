@@ -9,6 +9,10 @@ test("production guide document is readable with no canvas overlays or copy acti
     await page.setViewportSize({ width, height: 900 });
     await page.goto("./");
     await waitSaved(page);
+    await expect(page.locator(".workbench")).toHaveAttribute(
+      "data-version",
+      "1.3.0",
+    );
     await expect(page.locator(".guide-page")).toBeVisible();
     await expect(page.locator(".guide-card")).toHaveCount(6);
     await expect(
@@ -107,7 +111,11 @@ test("production assets, board editing, JSON restore and offline PWA", async ({
   const scope = await page.evaluate(
     async () => (await navigator.serviceWorker.ready).scope,
   );
-  expect(scope).toBe("https://copudy.github.io/mind-canvas/");
+  expect(scope).toBe(
+    new URL(
+      process.env.PRODUCTION_URL || "https://copudy.github.io/mind-canvas/",
+    ).href,
+  );
   await waitSaved(page);
   await context.setOffline(true);
   await page.reload();

@@ -39,6 +39,7 @@ export const repository = {
     );
   },
   async save(board: Board) {
+    validateBoard(board);
     const d = await db(),
       tx = d.transaction(["boards", "meta"], "readwrite"),
       stamp = Date.now();
@@ -56,6 +57,8 @@ export const repository = {
     return Number(await d.get("meta", "backup-at")) || 0;
   },
   async saveMany(boards: Board[], templates?: CanvasTemplate[]) {
+    boards.forEach(validateBoard);
+    if (templates) validateTemplates(templates);
     const d = await db(),
       tx = d.transaction(["boards", "meta"], "readwrite"),
       stamp = Date.now();
@@ -215,7 +218,8 @@ export function validateBoard(raw: unknown): Board {
       !str(v.target, 100) ||
       !ids.has(v.source) ||
       !ids.has(v.target) ||
-      v.source === v.target ||
+      (v.source === v.target &&
+        (!v.sourceItem || !v.targetItem || v.sourceItem === v.targetItem)) ||
       !color(v.color) ||
       !num(v.width, 1, 8) ||
       typeof v.dashed !== "boolean" ||
@@ -230,9 +234,13 @@ export function validateBoard(raw: unknown): Board {
             v.targetItem as string,
           ))) ||
       (v.sourceSide !== undefined &&
-        !["left", "right", "top", "bottom"].includes(String(v.sourceSide))) ||
+        !(
+          v.sourceItem ? ["left", "right"] : ["left", "right", "top", "bottom"]
+        ).includes(String(v.sourceSide))) ||
       (v.targetSide !== undefined &&
-        !["left", "right", "top", "bottom"].includes(String(v.targetSide))) ||
+        !(
+          v.targetItem ? ["left", "right"] : ["left", "right", "top", "bottom"]
+        ).includes(String(v.targetSide))) ||
       (v.waypoints !== undefined &&
         (!Array.isArray(v.waypoints) ||
           v.waypoints.length > 20 ||

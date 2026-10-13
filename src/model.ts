@@ -149,7 +149,12 @@ export function demoBoard(): Board {
   );
   heading.fontSize = 25;
   heading.bold = true;
-  heading.width = 400;
+  heading.textRole = "heading";
+  heading.background = "transparent";
+  heading.border = "transparent";
+  heading.height = 64;
+  heading.autoSize = false;
+  heading.width = 650;
   heading.maxWidth = 480;
   const calc = makeItem("calculator", { x: 780, y: 115 });
   calc.expression = "(1800 + 650) * 2";

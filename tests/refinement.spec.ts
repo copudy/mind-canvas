@@ -103,7 +103,7 @@ test("brand assets title tokens and unobstructed bottom library", async ({
   const heading = (await boards(page))
     .find((b) => !b.guide)
     .nodes.find((n: any) => n.text === "新的標題");
-  expect(heading.fontSize).toBe(26);
+  expect(heading.fontSize).toBe(28);
   expect(heading.bold).toBe(true);
 });
 test("guide protected greeting stable and practice remains editable", async ({
@@ -178,14 +178,37 @@ test("existing data untouched automatic welcome guide and guide creation idempot
   expect(data).toHaveLength(2);
   expect(data.find((x) => x.boardId === b.boardId)).toEqual(b);
 });
-test("templates create real editable objects relations and undo", async ({
+test("legacy flow data remains editable alongside mind templates and undo", async ({
   page,
 }) => {
   await ready(page);
   await page.getByRole("button", { name: "新的白板 ＋", exact: true }).click();
-  await page.getByRole("button", { name: "流程圖範本", exact: true }).click();
+  const legacy = makeBoard("舊流程測試");
+  legacy.nodes = ["開始", "下一步", "完成"].map((label, i) =>
+    makeItem("rectangle", { x: 40 + i * 300, y: 40 }, label),
+  );
+  legacy.relations = legacy.nodes.slice(0, 2).map((n, i) => ({
+    id: `flow-${i}`,
+    source: n.id,
+    target: legacy.nodes[i + 1].id,
+    color: "#3b82f6",
+    width: 2,
+    dashed: false,
+  }));
+  await dataAction(page, "匯入專案");
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "legacy-flow.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(
+      JSON.stringify({
+        format: "freeform-mind-canvas",
+        schemaVersion: 1,
+        boards: [legacy],
+      }),
+    ),
+  });
   await saved(page);
-  let b = (await boards(page)).find((b) => b.name === "新的白板");
+  let b = (await boards(page)).find((b) => b.name === "舊流程測試（匯入）");
   expect(b.nodes).toHaveLength(3);
   expect(b.relations).toHaveLength(2);
   await item(page, "下一步").dblclick();
@@ -200,7 +223,7 @@ test("templates create real editable objects relations and undo", async ({
   await expect(item(page, "下一步")).toBeVisible();
   await page.getByRole("button", { name: "心智圖範本", exact: true }).click();
   await saved(page);
-  b = (await boards(page)).find((b) => b.name === "新的白板");
+  b = (await boards(page)).find((b) => b.name === "舊流程測試（匯入）");
   expect(b.nodes.filter((n: any) => n.parentId)).toHaveLength(2);
 });
 test("independent browser profiles do not share boards and no outbound data requests", async ({

@@ -35,6 +35,7 @@ export function welcomeBoard(): Board {
       border: kind === "text" ? "transparent" : "#c5d5ef",
       color: "#23344c",
     });
+    if (kind === "text") n.background = "transparent";
     b.nodes.push(n);
     return n;
   };

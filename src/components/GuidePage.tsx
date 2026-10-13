@@ -88,7 +88,7 @@ export default function GuidePage({
             <p className="guide-eyebrow">02 · 心智圖</p>
             <h3>讓想法長出分支</h3>
             <p>
-              從「思考框架 → 心智圖」開始。選取節點後，Tab 加子節點、Enter
+              從「思考框架 → 心智圖範本」開始。選取節點後，Tab 加子節點、Enter
               加同層、Space 收合或展開。
             </p>
             <div className="guide-mind-example" aria-label="旅行計畫心智圖示範">
@@ -107,8 +107,8 @@ export default function GuidePage({
             <p className="guide-eyebrow">03 · 範本與關係</p>
             <h3>需要結構時，再套用框架</h3>
             <p>
-              一個心智圖節點是起點，範本則是整組可編輯的結構。游標停在工具上可先看用途與簡圖，再選擇
-              SWOT、5W1H、決策矩陣、WBS、旅行或會議框架。
+              文字想法可用 Tab
+              延伸分支；範本則是整組可編輯的結構。思考框架保留「心智圖範本」與「我的範本」，先前加入的其他框架仍能繼續編輯。
             </p>
             <div className="guide-example guide-flow">
               <span>收集想法</span>
@@ -169,7 +169,7 @@ export default function GuidePage({
                 <strong>旅行：</strong>地點分支、行程便條、計算預算。
               </li>
               <li>
-                <strong>工作：</strong>WBS 拆任務，會議範本追蹤下一步。
+                <strong>工作：</strong>清單拆任務，用「我的範本」重用會議紀錄。
               </li>
               <li>
                 <strong>生活：</strong>整理支出、比較選項、記下想做的事。

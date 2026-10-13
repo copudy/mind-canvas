@@ -17,7 +17,7 @@
   overflow: auto;
   flex: 1;
   min-height: 0;
-  font-size: 14px;
+  font-size: inherit;
 }
 .widget-body input,
 .widget-body select,

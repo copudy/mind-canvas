@@ -27,7 +27,13 @@ export function autosize(n: Item) {
   n.width = Math.min(
     n.maxWidth,
     Math.max(
-      n.textRole === "heading" ? 320 : n.kind === "sticky" ? 220 : 240,
+      n.callout
+        ? 340
+        : n.textRole === "heading"
+          ? 320
+          : n.kind === "sticky"
+            ? 220
+            : 240,
       Math.ceil(widest + pad),
     ),
   );

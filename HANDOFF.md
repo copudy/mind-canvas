@@ -1,5 +1,17 @@
 # Mind Canvas 安全交接
 
+## v1.3.0 最終回歸與發布準備（最新，2026-10-13）
+
+接續中斷的 feature/v1.3.0-ux，已保存 aed8367 的開發里程碑；main／origin/main 都為 afa364221600d7cbd718ee1c4cc49526264f819f，v1.2.0 Tag 不移動。使用者已授權本次全部安全條件通過後正式發布。gh 已確認 copudy、PUBLIC／ADMIN、repo／workflow scopes，Remote https://github.com/copudy/mind-canvas.git ，尚無 v1.3.0 Tag。
+
+九項實作與限制見 V13_REPORT.md；資料庫仍1、JSON讀1～4，無刪除資料或原文自動解析。新欄位及範本保存、項目錨點、表格局部格式與官方指南已整合。修正編輯器初始化／貼上競態、編號清單合法 schema 儲存驗證、批次外觀重設資料串用、縮放捕捉與項目端點一致性。
+
+A：74/74 單元、Lint／正式Build 通過，最終完整64/64瀏覽器（3.6分鐘）通過，包含離線冷啟動編輯器。Markdown連續三輪6/6。本機正式驗證套件3/3。實際 v1.2 client 同 origin SW 更新、非指南白板與自訂範本完整比對通過，舊原文及表格資料不變。audit 0告警；新歷史与待提交來源未發現憑證模式。
+
+現在尚未 Push、標記或部署 v1.3.0；正式仍v1.2.0。本機安全門檻已全通過，下一步正常 commit、main fast-forward、annotated v1.3.0、正常 push，等待Pages，正式15項驗證與data-version1.3.0。失敗不可發布，不 Force、重寫歷史、清資料或挪動舊Tag。完成後將正式SHA／Actions／測試記錄追加於本檔最上方。
+
+E：實體中文輸入法／手機與OS安裝、真實配額／逐出／強殺未驗證。Markdown套件官方Beta，限定已測子集；新格式4須新版還原，回復程式碼前先備份，避免舊程式編輯新格式。
+
 ## v1.3.0 UX 整合進行中（最新，尚未發布）
 
 使用者本次已授權全部安全檢查通過後直接部署；分支 feature/v1.3.0-ux，基準 main afa3642／正式 v1.2.0，Remote copudy/mind-canvas。文字 WYSIWYG（Tiptap 3.31.4／ProseMirror／Markdown／UniqueID）、可選 Rich JSON／外觀／Callout、清單穩定 ID 錨點、表格 cell styles、Pointer Capture 八方向縮放與較少轉折路由已整合。旧白板不自動轉 Markdown、不清除資料；新內容匯出容器4，讀1／2／3／4，Board及DB仍1。

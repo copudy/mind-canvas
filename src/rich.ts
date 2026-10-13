@@ -79,6 +79,50 @@ export function validRich(doc: unknown): doc is RichNode {
       ].includes(n.type)
     )
       return false;
+    if (n.content !== undefined && !Array.isArray(n.content)) return false;
+    if (n.marks !== undefined && !Array.isArray(n.marks)) return false;
+    const children = n.content || [];
+    if (!Array.isArray(children)) return false;
+    if (children.some((c) => !c || typeof c !== "object")) return false;
+    const blocks = [
+      "paragraph",
+      "heading",
+      "bulletList",
+      "orderedList",
+      "blockquote",
+      "codeBlock",
+      "horizontalRule",
+    ];
+    if (
+      (n.type === "doc" || n.type === "blockquote") &&
+      (!children.length || children.some((c) => !blocks.includes(c.type)))
+    )
+      return false;
+    if (
+      ["bulletList", "orderedList"].includes(n.type) &&
+      (!children.length || children.some((c) => c.type !== "listItem"))
+    )
+      return false;
+    if (
+      n.type === "listItem" &&
+      (children[0]?.type !== "paragraph" ||
+        children.some((c) => !blocks.includes(c.type)))
+    )
+      return false;
+    if (
+      ["paragraph", "heading"].includes(n.type) &&
+      children.some((c) => !["text", "hardBreak"].includes(c.type))
+    )
+      return false;
+    if (n.type === "codeBlock" && children.some((c) => c.type !== "text"))
+      return false;
+    if (
+      ["text", "hardBreak", "horizontalRule"].includes(n.type) &&
+      children.length
+    )
+      return false;
+    if (n.type === "text" && (typeof n.text !== "string" || !n.text))
+      return false;
     if (n.text !== undefined) {
       if (typeof n.text !== "string") return false;
       length += n.text.length;
@@ -87,6 +131,14 @@ export function validRich(doc: unknown): doc is RichNode {
     if (n.attrs) {
       if (typeof n.attrs !== "object" || Array.isArray(n.attrs)) return false;
       for (const [k, a] of Object.entries(n.attrs)) {
+        if (k === "type" && n.type === "orderedList") {
+          if (
+            a !== null &&
+            (typeof a !== "string" || !["1", "a", "A", "i", "I"].includes(a))
+          )
+            return false;
+          continue;
+        }
         if (
           !["id", "level", "start", "language"].includes(k) ||
           !(
@@ -103,13 +155,20 @@ export function validRich(doc: unknown): doc is RichNode {
     }
     if (n.type === "listItem") {
       const id = n.attrs?.id;
-      if (typeof id !== "string" || !id || ids.has(id)) return false;
+      if (
+        typeof id !== "string" ||
+        !/^[A-Za-z0-9_-]{1,100}$/.test(id) ||
+        ids.has(id)
+      )
+        return false;
       ids.add(id);
     }
     if (n.marks && !Array.isArray(n.marks)) return false;
     if (
       n.marks?.some(
         (m) =>
+          !m ||
+          typeof m !== "object" ||
           !["bold", "italic", "code", "strike", "underline"].includes(m.type) ||
           (m.attrs && Object.keys(m.attrs).length),
       )
@@ -135,9 +194,16 @@ export function applyRich(b: Board, nodeId: string, doc: RichNode) {
   );
 }
 export function appearance(n: Item): Partial<Item> {
+  const rich = n.rich ? structuredClone(n.rich) : undefined;
+  const clean = (r: RichNode) => {
+    if (r.marks) r.marks = r.marks.filter((m) => m.type === "code");
+    r.content?.forEach(clean);
+  };
+  if (rich) clean(rich);
   const heading = n.textRole === "heading",
     callout = !!n.callout;
   return {
+    ...(rich ? { rich } : {}),
     color: "#23344c",
     fontSize: heading ? 28 : 16,
     bold: heading,
@@ -152,10 +218,10 @@ export function appearance(n: Item): Partial<Item> {
           : "#ffffff",
     border: heading ? "transparent" : callout ? "#3b82f6" : "#c5d5ef",
     ...(n.widget?.type === "table"
-      ? { widget: { ...n.widget, styles: {} } }
+      ? { widget: { ...structuredClone(n.widget), styles: {} } }
       : {}),
     ...(callout
-      ? { callout: { title: "提醒", icon: "💡", accent: "#3b82f6" } }
+      ? { callout: { ...n.callout!, icon: "💡", accent: "#3b82f6" } }
       : {}),
   };
 }

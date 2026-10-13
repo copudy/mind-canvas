@@ -477,6 +477,7 @@ export function useWorkspace() {
       saveTemplates((current) => current.filter((t) => t.id !== tid)),
     lastSaved,
     lastBackup,
+    isGesturing: () => gesture.current,
     beginGesture: () => {
       gesture.current = true;
       if (timer.current) clearTimeout(timer.current);

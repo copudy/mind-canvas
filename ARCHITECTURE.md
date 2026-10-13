@@ -1,5 +1,13 @@
 # 架構與決策
 
+## v1.3.0 格式文字與項目錨點
+
+RichNode 可選 AST 與 text fallback 並存；Tiptap／ProseMirror 原生編輯歷史與 IME，安全 React reader，舊原文不自動解析。listItem ID 在物件內穩定，Relation.sourceItem／targetItem 指向項目而非索引；renderer 測量 row 邊界保存在暫態 map，排序後路由自動更新。刪除項目只清理其關聯。文字工具可建立原有 mind 層級，保留舊型別。
+
+表格 styles 用 row:col 稀疏資料，尺寸刪減清理越界 key，選取暫態不寫DB。Callout 與外觀為可選欄位，重設按物件個別生成，保留內容。ResizeHandles 8方向 Pointer Capture，世界座標換算但螢幕命中區固定，開始 checkpoint、過程不儲存、結束合併，cancel 還原。
+
+路由先少轉折候選，再避障搜索；端點間隙適配近距離，沿用手動設定，成本門檻避免小幅移動變換端點。JSON 容器4讀1～4，DB／Board版本仍1；儲存與匯入同一驗證。編輯器延後載入但PWA預快取。完整決策及限制見 V13_REPORT.md。
+
 ## v1.2.0 可攜小工具與預覽
 
 可選 Item.widget 保存 icon／table／calendar，不增加大型畫布框架。CanvasWidget 在既有節點內渲染；穩定 ID、拖曳／調整尺寸／關聯／複製／範本／背景儲存沿用既有路徑。輸入在 focus 記錄 checkpoint、change 更新不重複建立歷史；autosize 排除小工具。widgets.ts 集中邊界與日期驗證。含 widget 的匯出容器為 3，匯入仍讀 1／2／3，DB 版本未變。

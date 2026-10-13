@@ -14,6 +14,44 @@ import { captureTemplate, instantiateTemplate } from "./templates";
 import { validWidget, resizeTable } from "./widgets";
 import { routeConnector, segmentHits } from "./router";
 describe("rich documents and anchor compatibility", () => {
+  it("accepts the editor ordered-list schema while rejecting unsafe attributes", () => {
+    const doc = listDoc(["第一項"]);
+    doc.content![0].type = "orderedList";
+    doc.content![0].attrs = { start: 1, type: null };
+    expect(validRich(doc)).toBe(true);
+    const b = makeBoard();
+    const n = makeItem("text", { x: 0, y: 0 });
+    n.rich = doc;
+    b.nodes = [n];
+    expect(importBundle(exportProject([b])).boards[0].nodes[0].rich).toEqual(
+      doc,
+    );
+    doc.content![0].attrs.type = "javascript:alert(1)";
+    expect(validRich(doc)).toBe(false);
+    expect(
+      validRich({
+        type: "doc",
+        content: [{ type: "paragraph", content: [{ type: "listItem" }] }],
+      }),
+    ).toBe(false);
+  });
+  it("resets each object's appearance without copying table cells or callout titles", () => {
+    const a = makeItem("text", { x: 0, y: 0 });
+    const b = makeItem("text", { x: 500, y: 0 });
+    a.widget = {
+      type: "table",
+      cells: [["原表甲"]],
+      styles: { "0:0": { bold: true } },
+    };
+    b.widget = { type: "table", cells: [["原表乙"]] };
+    a.callout = { title: "自己的標題", icon: "⭐", accent: "#ff0000" };
+    const resetA = appearance(a),
+      resetB = appearance(b);
+    expect(resetA.widget).toMatchObject({ cells: [["原表甲"]], styles: {} });
+    expect(resetB.widget).toMatchObject({ cells: [["原表乙"]], styles: {} });
+    expect(resetA.callout?.title).toBe("自己的標題");
+    expect(a.widget.styles).toEqual({ "0:0": { bold: true } });
+  });
   it("keeps legacy Markdown-looking text literal and preserves all line breaks", () => {
     const t = "**原本字樣**\n\n中文 *文字*";
     expect(plainText(plainDoc(t))).toBe(t);
@@ -155,6 +193,49 @@ describe("rich documents and anchor compatibility", () => {
           r.points[i].y === r.points[i - 1].y,
       ).toBe(true);
       expect(segmentHits(r.points[i - 1], r.points[i], block)).toBe(false);
+    }
+  });
+  it("keeps near nonoverlapping item connectors short instead of falsely blocking", () => {
+    const a = { x: 0, y: 0, width: 240, height: 180 },
+      b = { x: 250, y: 40, width: 240, height: 180 };
+    const r = routeConnector(a, b, [], "right", "left", undefined, {
+      source: { x: 240, y: 70 },
+      target: { x: 250, y: 130 },
+    });
+    expect(r.blocked).toBe(false);
+    expect(r.points.length).toBeLessThanOrEqual(4);
+  });
+  it("routes dense and crossing scenes without passing through other cards", () => {
+    const nodes = Array.from({ length: 12 }, (_, i) => ({
+      x: (i % 4) * 320,
+      y: Math.floor(i / 4) * 190,
+      width: 240,
+      height: 120,
+    }));
+    for (const [s, t] of [
+      [0, 11],
+      [3, 8],
+      [1, 10],
+      [2, 9],
+      [4, 7],
+      [0, 5],
+    ]) {
+      const others = nodes.filter((_, i) => i !== s && i !== t);
+      const r = routeConnector(nodes[s], nodes[t], others);
+      expect(r.blocked).toBe(false);
+      for (let i = 1; i < r.points.length; i++)
+        for (const n of others)
+          expect(segmentHits(r.points[i - 1], r.points[i], n)).toBe(false);
+      const length = r.points.reduce(
+        (v, p, i) =>
+          i
+            ? v +
+              Math.abs(p.x - r.points[i - 1].x) +
+              Math.abs(p.y - r.points[i - 1].y)
+            : 0,
+        0,
+      );
+      expect(length).toBeLessThan(3000);
     }
   });
 });

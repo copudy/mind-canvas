@@ -26,35 +26,18 @@ test("frequent tools first and hover previews distinguish a node from structured
   const labels = await page
     .locator(".library-tools > button")
     .allTextContents();
-  expect(labels.slice(0, 4)).toEqual([
-    "我的範本",
-    "心智圖節點",
-    "心智圖範本",
-    "流程圖範本",
-  ]);
-  await page
-    .getByRole("button", { name: "新增心智圖節點", exact: true })
-    .hover();
-  await expect(page.getByRole("tooltip")).toContainText("只新增一個想法");
+  expect(labels).toEqual(["我的範本", "心智圖範本"]);
+  await expect(
+    page.getByRole("button", { name: "新增心智圖節點", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "流程圖範本", exact: true }),
+  ).toHaveCount(0);
   await page.getByRole("button", { name: "心智圖範本", exact: true }).hover();
   await expect(page.getByRole("tooltip")).toContainText(
     "一次加入主題及範例分支",
   );
-  for (const label of [
-    "SWOT 分析",
-    "5W1H 分析",
-    "決策矩陣",
-    "專案 WBS 工作拆解",
-    "旅行規劃",
-    "會議紀錄與行動事項",
-  ]) {
-    const b = page.getByRole("button", { name: label, exact: true });
-    await b.hover();
-    await expect(
-      page.getByRole("tooltip").getByRole("img", { name: "範本結構預覽" }),
-    ).toBeVisible();
-    await expect(page.locator(".react-flow__node")).toHaveCount(0);
-  }
+  await expect(page.locator(".react-flow__node")).toHaveCount(0);
   await page.screenshot({ path: "artifacts/v12-preview-desktop.png" });
   await page.getByRole("button", { name: "我的範本", exact: true }).focus();
   await expect(page.getByRole("tooltip")).toContainText("保存的物件組合");
@@ -170,7 +153,7 @@ test("mobile tool preview and calendar stay within the viewport", async ({
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await start(page);
-  await page.getByRole("button", { name: "SWOT 分析", exact: true }).focus();
+  await page.getByRole("button", { name: "心智圖範本", exact: true }).focus();
   const tip = page.getByRole("tooltip");
   await expect(tip).toBeVisible();
   const box = await tip.boundingBox();

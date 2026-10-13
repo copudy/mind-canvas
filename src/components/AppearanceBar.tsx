@@ -1,13 +1,14 @@
 import type { Item } from "../model";
-import { appearance } from "../rich";
 export default function AppearanceBar({
   item,
   patch,
   advanced,
+  reset,
 }: {
   item: Item;
   patch: (p: Partial<Item>) => void;
   advanced: () => void;
+  reset: () => void;
 }) {
   return (
     <div
@@ -113,7 +114,7 @@ export default function AppearanceBar({
           }
         />
       </label>
-      <button onClick={() => patch(appearance(item))}>重設外觀</button>
+      <button onClick={reset}>重設外觀</button>
       <button onClick={advanced}>進階設定</button>
     </div>
   );

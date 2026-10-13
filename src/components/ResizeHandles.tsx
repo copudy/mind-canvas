@@ -1,4 +1,4 @@
-import { useRef, useContext } from "react";
+import { useRef, useContext, useEffect } from "react";
 import { useReactFlow, useViewport } from "@xyflow/react";
 import { CanvasContext } from "./CanvasNode";
 import type { Item } from "../model";
@@ -30,7 +30,40 @@ export default function ResizeHandles({
     zoom: number;
     item: Item;
     position: string;
+    pointerId: number;
+    target: HTMLButtonElement;
   } | null>(null);
+  useEffect(() => {
+    const cancel = (e: KeyboardEvent) => {
+      const a = start.current;
+      if (!a || e.key !== "Escape" || e.isComposing) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      actions.patch(
+        item.id,
+        {
+          position: a.item.position,
+          width: a.item.width,
+          height: a.item.height,
+          autoSize: a.item.autoSize,
+          mode: a.item.mode,
+        },
+        false,
+      );
+      start.current = null;
+      if (a.target.hasPointerCapture(a.pointerId))
+        a.target.releasePointerCapture(a.pointerId);
+      actions.endGesture();
+    };
+    window.addEventListener("keydown", cancel, true);
+    return () => {
+      window.removeEventListener("keydown", cancel, true);
+      if (start.current) {
+        start.current = null;
+        actions.endGesture();
+      }
+    };
+  }, [item.id]);
   return (
     <>
       {positions.map((position) => {
@@ -64,7 +97,11 @@ export default function ResizeHandles({
                       : "nesw-resize",
             }}
             onPointerDown={(e) => {
-              if (e.button !== 0) return;
+              if (e.button !== 0 || !e.isPrimary) {
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+              }
               e.preventDefault();
               e.stopPropagation();
               actions.checkpoint();
@@ -75,6 +112,8 @@ export default function ResizeHandles({
                 zoom: rf.getZoom(),
                 item: structuredClone(item),
                 position,
+                pointerId: e.pointerId,
+                target: e.currentTarget,
               };
               e.currentTarget.setPointerCapture(e.pointerId);
             }}
@@ -101,6 +140,7 @@ export default function ResizeHandles({
                   width: w,
                   height: h,
                   autoSize: false,
+                  mode: a.item.mode === "Auto" ? "Free" : a.item.mode,
                   position: {
                     x:
                       a.item.position.x +
@@ -121,6 +161,12 @@ export default function ResizeHandles({
                 e.currentTarget.releasePointerCapture(e.pointerId);
               actions.endGesture();
             }}
+            onLostPointerCapture={() => {
+              if (start.current) {
+                start.current = null;
+                actions.endGesture();
+              }
+            }}
             onPointerCancel={() => {
               const a = start.current;
               if (a)
@@ -130,6 +176,8 @@ export default function ResizeHandles({
                     width: a.item.width,
                     height: a.item.height,
                     position: a.item.position,
+                    autoSize: a.item.autoSize,
+                    mode: a.item.mode,
                   },
                   false,
                 );

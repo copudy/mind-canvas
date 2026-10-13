@@ -8,6 +8,7 @@
 .canvas-item.text,
 .canvas-item.mind,
 .canvas-item.sticky {
+  display: block;
   overflow: visible;
 }
 .node-text {
@@ -233,6 +234,15 @@
   border: 0;
   font-size: 20px;
 }
+.callout-heading select[aria-label="Callout 外觀預設"] {
+  width: 72px;
+  flex-shrink: 0;
+  font-size: 13px;
+}
+.callout-heading select[aria-label="Callout 圖示"] {
+  width: 40px;
+  flex-shrink: 0;
+}
 .callout-heading input {
   min-width: 0;
   width: 100%;
@@ -248,6 +258,7 @@
   flex-shrink: 0;
 }
 .table-format-controls {
+  font-size: 13px;
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
@@ -305,5 +316,56 @@
 @media (pointer: coarse) {
   .list-item-actions {
     display: flex;
+  }
+}
+
+.workbench:has(
+    .widget-body input:focus,
+    .widget-body textarea:focus,
+    .callout-heading input:focus
+  )
+  .appearance-bar {
+  display: none;
+}
+@media (max-width: 760px) {
+  .workbench:has(
+      .rich-editor:focus,
+      .widget-body input:focus,
+      .widget-body textarea:focus,
+      .callout-heading input:focus
+    )
+    .tool-library {
+    display: none;
+  }
+  .canvas-item.text:not(.legacy-text),
+  .canvas-item.mind,
+  .canvas-item.sticky {
+    padding: 24px;
+  }
+}
+.canvas-item.text.legacy-text {
+  padding: 6px;
+}
+.legacy-text > .node-text {
+  line-height: 1.55;
+  min-height: 0;
+}
+
+.rich-edit-dock {
+  position: fixed;
+  bottom: 178px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  max-width: calc(100% - 24px);
+}
+@media (max-width: 760px) {
+  .rich-edit-dock {
+    bottom: 12px;
   }
 }

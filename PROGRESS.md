@@ -1,5 +1,9 @@
 # 開發進度與恢復
 
+## v1.3.0 最終驗證（2026-10-13）
+
+九項核心需求已實作，詳V13_REPORT。74單元、Lint／Build、最終完整64瀏覽器（3.6分鐘）、Markdown重複6項、離線首次lazy編輯器及實際v1.2升級資料完整比對通過；本機正式套件3/3。尚未發布，使用者已授權檢查通過後推送／部署。接手先讀HANDOFF頂部及Git狀態；不要重建或清除資料。
+
 ## v1.3.0 UX 整合進行中（最新，尚未發布）
 
 使用者本次已授權全部安全檢查通過後直接部署；分支 feature/v1.3.0-ux，基準 main afa3642／正式 v1.2.0，Remote copudy/mind-canvas。文字 WYSIWYG（Tiptap 3.31.4／ProseMirror／Markdown／UniqueID）、可選 Rich JSON／外觀／Callout、清單穩定 ID 錨點、表格 cell styles、Pointer Capture 八方向縮放與較少轉折路由已整合。旧白板不自動轉 Markdown、不清除資料；新內容匯出容器4，讀1／2／3／4，Board及DB仍1。

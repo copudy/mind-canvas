@@ -1,7 +1,7 @@
 import { listIds } from "./rich";
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import { hiddenIds, type Board } from "./model";
-import { routeConnector, rectOf } from "./router";
+import { routeConnector, rectOf, type Route } from "./router";
 import type { FlowNode } from "./components/CanvasNode";
 import type { FlowEdge } from "./components/Connector";
 export function useCanvasGraph(
@@ -11,6 +11,10 @@ export function useCanvasGraph(
   mount: { id: string; index: number } | null,
   listMetrics: Record<string, Record<string, number>> = {},
 ) {
+  const previous = useRef<{ boardId: string; routes: Map<string, Route> }>({
+    boardId: "",
+    routes: new Map(),
+  });
   const hidden = useMemo(
     () => (board ? hiddenIds(board) : new Set<string>()),
     [board],
@@ -54,6 +58,8 @@ export function useCanvasGraph(
   ]);
   const routed = useMemo(() => {
     if (!board) return [];
+    if (previous.current.boardId !== board.boardId)
+      previous.current = { boardId: board.boardId, routes: new Map() };
     const map = new Map(visible.map((n) => [n.id, n]));
     const relations = [
       ...board.relations.map((r) => ({ ...r, tree: false })),
@@ -112,7 +118,7 @@ export function useCanvasGraph(
             r.targetItem,
             targetSide === "right" ? "right" : "left",
           );
-        const route = routeConnector(
+        let route = routeConnector(
           rectOf(a),
           rectOf(b),
           visible.filter((n) => n.id !== a.id && n.id !== b.id).map(rectOf),
@@ -121,6 +127,38 @@ export function useCanvasGraph(
           r.waypoints,
           { source: sourceAnchor, target: targetAnchor },
         );
+        const old = previous.current.routes.get(r.id);
+        if (
+          old &&
+          !r.sourceSide &&
+          !r.targetSide &&
+          !r.sourceItem &&
+          !r.targetItem &&
+          !r.waypoints?.length &&
+          !route.blocked
+        ) {
+          const stable = routeConnector(
+            rectOf(a),
+            rectOf(b),
+            visible.filter((n) => n.id !== a.id && n.id !== b.id).map(rectOf),
+            old.sourceSide,
+            old.targetSide,
+          );
+          const score = (v: Route) =>
+            v.points.reduce(
+              (sum, p, i) =>
+                i
+                  ? sum +
+                    Math.abs(p.x - v.points[i - 1].x) +
+                    Math.abs(p.y - v.points[i - 1].y)
+                  : 0,
+              0,
+            ) +
+            (v.points.length - 2) * 32;
+          if (!stable.blocked && score(stable) <= score(route) * 1.15 + 16)
+            route = stable;
+        }
+        previous.current.routes.set(r.id, route);
         return {
           id: r.id,
           type: "orthogonal" as const,

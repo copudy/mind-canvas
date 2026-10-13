@@ -47,6 +47,8 @@ export interface CanvasActions {
   resume: () => void;
   createBoard: () => void;
   dataSettings: () => void;
+  undo: () => void;
+  redo: () => void;
   listMetrics: Record<string, Record<string, number>>;
   setListMetrics: (id: string, ys: Record<string, number>) => void;
 }
@@ -241,9 +243,13 @@ export default function CanvasNode({
       );
       actions.setListMetrics(id, ys);
       const content = el.querySelector<HTMLElement>(".rich-view,.rich-editor");
-      if (item.autoSize && content) {
+      if (content) {
+        const cs = getComputedStyle(el);
         const needed =
-          content.scrollHeight + (editing ? 78 : 36) + (item.callout ? 48 : 0);
+          (content.getBoundingClientRect().top - box.top) / scale +
+          content.scrollHeight +
+          parseFloat(cs.paddingBottom) +
+          parseFloat(cs.borderBottomWidth);
         if (needed > item.height + 2)
           actions.patch(id, { height: Math.min(3000, needed) }, false);
       }
@@ -292,7 +298,7 @@ export default function CanvasNode({
   return (
     <div
       ref={root}
-      className={`canvas-item ${item.kind} ${id === actions.guideEntryId || id === actions.guideBackupId ? "guide-entry-node" : ""} ${selected ? "is-selected" : ""} ${data.mountPreview ? "mount-preview" : ""}`}
+      className={`canvas-item ${item.kind} ${item.kind === "text" && !item.rich && !item.textRole && !item.callout ? "legacy-text" : ""} ${id === actions.guideEntryId || id === actions.guideBackupId ? "guide-entry-node" : ""} ${selected ? "is-selected" : ""} ${data.mountPreview ? "mount-preview" : ""}`}
       style={style}
     >
       <div className="node-drag-grip" title="拖曳移動" aria-label="拖曳移動">
@@ -315,7 +321,7 @@ export default function CanvasNode({
                   ...item.callout!,
                   icon: e.target.value === "quote" ? "💬" : "💡",
                   accent: e.target.value === "quote" ? "#8b9dc3" : "#3b82f6",
-                  title: e.target.value === "quote" ? "引言" : "提醒",
+                  title: item.callout!.title,
                 },
               })
             }
@@ -386,7 +392,7 @@ export default function CanvasNode({
           />
         </span>
       ))}
-      {selected && !editing && !actions.readOnly && (
+      {selected && !actions.readOnly && (
         <ResizeHandles item={item} minWidth={minWidth} minHeight={minHeight} />
       )}
 
@@ -410,6 +416,8 @@ export default function CanvasNode({
       {item.widget && !editing ? (
         <CanvasWidget
           item={item}
+          undo={actions.undo}
+          redo={actions.redo}
           patch={(p, r) => actions.patch(id, p, r)}
           checkpoint={actions.checkpoint}
           edit={() => actions.setEdit(id)}

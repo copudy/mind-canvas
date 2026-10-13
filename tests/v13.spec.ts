@@ -1,6 +1,35 @@
 import { test, expect, type Page } from "@playwright/test";
 import { waitSaved, dataAction } from "./ui";
 import { readFile } from "node:fs/promises";
+test("offline first use loads the lazy rich editor and persists formatted text", async ({
+  page,
+  context,
+}) => {
+  await page.goto("./");
+  await waitSaved(page);
+  await page.evaluate(async () => {
+    await navigator.serviceWorker.ready;
+  });
+  await expect
+    .poll(() => page.evaluate(() => !!navigator.serviceWorker.controller))
+    .toBe(true);
+  await context.setOffline(true);
+  await page.reload();
+  await waitSaved(page);
+  await page.getByRole("button", { name: "建立新白板", exact: true }).click();
+  await tool(page, "文字筆記", "新增自由文字");
+  const e = page.getByRole("textbox", { name: "編輯節點文字", exact: true });
+  await e.fill("");
+  await e.pressSequentially("**offline** ");
+  await expect(e.locator("strong")).toHaveText("offline");
+  await e.press("Control+Enter");
+  await waitSaved(page);
+  await page.reload();
+  await waitSaved(page);
+  await page.getByRole("button", { name: /繼續上次的白板/ }).click();
+  await expect(page.locator(".rich-view strong")).toHaveText("offline");
+  await context.setOffline(false);
+});
 async function start(p: Page) {
   await p.goto("./");
   await waitSaved(p);
@@ -174,6 +203,9 @@ test("list item anchor survives reorder and deletion undo and JSON backup", asyn
   await waitSaved(page);
   let d = await board(page);
   expect(d.relations).toHaveLength(1);
+  const originalPath = await page
+    .locator(".react-flow__edge-path")
+    .getAttribute("d");
   const anchor = d.relations[0].sourceItem;
   expect(anchor).toBeTruthy();
   await list.locator("li").nth(1).hover();
@@ -185,6 +217,10 @@ test("list item anchor survives reorder and deletion undo and JSON backup", asyn
   await waitSaved(page);
   d = await board(page);
   expect(d.relations[0].sourceItem).toBe(anchor);
+  await expect(page.locator(".react-flow__edge-path")).not.toHaveAttribute(
+    "d",
+    originalPath!,
+  );
   await list.locator("li").first().hover();
   await list
     .getByRole("button", { name: "刪除清單項目", exact: true })
@@ -245,6 +281,16 @@ test("table selected cell range row column styles persist and undo", async ({
   expect((await board(page)).nodes[0].widget.styles["2:1"].align).toBe(
     "center",
   );
+  const download = page.waitForEvent("download");
+  await dataAction(page, "匯出本白板");
+  const file = await (await download).path();
+  expect(JSON.parse(await readFile(file!, "utf8")).schemaVersion).toBe(4);
+  await dataAction(page, "匯入專案");
+  await page.locator('input[type="file"]').setInputFiles(file!);
+  await waitSaved(page);
+  expect((await board(page)).nodes[0].widget.styles["2:1"].align).toBe(
+    "center",
+  );
   await page.screenshot({ path: "artifacts/v13-table.png" });
 });
 test("Callout body title icon presets and compact framework menu", async ({
@@ -278,4 +324,107 @@ test("Callout body title icon presets and compact framework menu", async ({
     page.getByRole("button", { name: "新增心智圖節點", exact: true }),
   ).toHaveCount(0);
   await page.screenshot({ path: "artifacts/v13-callout.png" });
+});
+
+test("typed Markdown input rules shortcuts and native editor undo redo", async ({
+  page,
+}) => {
+  await start(page);
+  await tool(page, "文字筆記", "新增自由文字");
+  const e = page.getByRole("textbox", { name: "編輯節點文字", exact: true });
+  await e.fill("");
+  await e.pressSequentially("**鍵盤粗體** ");
+  await expect(e.locator("strong").first()).toContainText("鍵盤粗體");
+  await e.press("Control+b");
+  await e.pressSequentially("快捷");
+  await e.press("Control+b");
+  await e.press("Control+z");
+  await e.press("Control+Shift+z");
+  await expect(e).toContainText("快捷");
+  await e.press("Control+i");
+  await e.pressSequentially("斜體");
+  await e.press("Control+i");
+  await expect(e.locator("em").first()).toContainText("斜體");
+  await e.pressSequentially(" `行內` ");
+  await expect(e.locator("code").first()).toContainText("行內");
+  await e.press("Enter");
+  await e.pressSequentially("- 項目 A");
+  await e.press("Enter");
+  await e.pressSequentially("項目 B");
+  await expect(e.locator("ul li")).toHaveCount(2);
+  await e.press("Enter");
+  await e.press("Enter");
+  await e.pressSequentially("1. 步驟");
+  await expect(e.locator("ol li")).toHaveCount(1);
+  await e.press("Control+Enter");
+  await waitSaved(page);
+  await expect(page.locator(".rich-view strong").first()).toContainText(
+    "鍵盤粗體",
+  );
+  await page.screenshot({ path: "artifacts/v13-markdown.png" });
+});
+test.describe("touch and viewport coordinate transforms", () => {
+  test.use({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    isMobile: true,
+  });
+  test("touch selects and captures resize at two zoom levels", async ({
+    page,
+    context,
+  }) => {
+    const errors: string[] = [];
+    page.on("pageerror", (e) => errors.push(e.message));
+    await start(page);
+    await text(page, "觸控想法");
+    const node = page.locator(".react-flow__node");
+    const body = await node.locator(".node-text").boundingBox();
+    await page.touchscreen.tap(body!.x + 15, body!.y + 15);
+    await expect(node.locator(".resize-hit")).toHaveCount(8);
+    const cdp = await context.newCDPSession(page);
+    const before = (await board(page)).nodes[0];
+    const handle = node.getByRole("button", {
+      name: "縮放 bottom-right",
+      exact: true,
+    });
+    const hit = await handle.boundingBox();
+    expect(hit!.width).toBeGreaterThanOrEqual(38);
+    const x = hit!.x + hit!.width / 2,
+      y = hit!.y + hit!.height / 2;
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: "touchStart",
+      touchPoints: [{ x, y }],
+    });
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: [{ x: x + 45, y: y + 30 }],
+    });
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: "touchEnd",
+      touchPoints: [],
+    });
+    await waitSaved(page);
+    expect((await board(page)).nodes[0].width).toBeGreaterThan(
+      before.width + 35,
+    );
+    await page.locator(".canvas-surface").focus();
+    await page.keyboard.down("Control");
+    await page.mouse.move(200, 360);
+    await page.mouse.wheel(0, 500);
+    await page.keyboard.up("Control");
+    await page.waitForTimeout(400);
+    await waitSaved(page);
+    expect((await board(page)).viewport.zoom).toBeLessThan(1);
+    expect((await handle.boundingBox())!.width).toBeGreaterThanOrEqual(38);
+    await expect(
+      page.getByRole("button", { name: "進階設定", exact: true }),
+    ).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await page.screenshot({ path: "artifacts/v13-touch.png" });
+    expect(errors).toEqual([]);
+  });
 });

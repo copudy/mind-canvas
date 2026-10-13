@@ -1,3 +1,5 @@
+import { officialTemplates, instantiateTemplate } from "../src/templates";
+import { makeBoard } from "../src/model";
 import { test, expect, type Page } from "@playwright/test";
 import { waitSaved, dataAction } from "./ui";
 import { readFile } from "node:fs/promises";
@@ -128,24 +130,38 @@ test("official guide read-only document, no copy, returns from any board", async
     page.getByRole("button", { name: /繼續上次的白板/ }),
   ).toBeVisible();
 });
-test("six official templates insert editable independent structured content", async ({
+test("six legacy official frameworks retain data and relations after menu removal", async ({
   page,
 }) => {
   await page.goto("/");
   await waitSaved(page);
   await page.getByRole("button", { name: "建立新白板", exact: true }).click();
-  for (const name of [
-    "SWOT 分析",
-    "5W1H 分析",
-    "決策矩陣",
-    "專案 WBS 工作拆解",
-    "旅行規劃",
-    "會議紀錄與行動事項",
-  ]) {
-    await tool(page, "思考框架", name);
-    await waitSaved(page);
-  }
-  const b = (await docs(page)).find((b) => !b.guide);
+  const legacy = makeBoard("既有分析框架");
+  officialTemplates.forEach((t, i) => {
+    const doc = instantiateTemplate(t, { x: i * 1100, y: 0 });
+    legacy.nodes.push(...doc.nodes);
+    legacy.relations.push(...doc.relations);
+  });
+  await dataAction(page, "匯入專案");
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "legacy-frameworks.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(
+      JSON.stringify({
+        format: "freeform-mind-canvas",
+        schemaVersion: 1,
+        boards: [legacy],
+      }),
+    ),
+  });
+  await waitSaved(page);
+  const b = (await docs(page)).find((b) => b.name === "既有分析框架（匯入）");
+  expect(b.nodes).toEqual(legacy.nodes);
+  expect(b.relations).toEqual(legacy.relations);
+  for (const t of officialTemplates)
+    await expect(
+      page.getByRole("button", { name: t.name, exact: true }),
+    ).toHaveCount(0);
   expect(b.nodes.length).toBeGreaterThanOrEqual(30);
   expect(new Set(b.nodes.map((n: any) => n.id)).size).toBe(b.nodes.length);
   expect(b.relations.length).toBeGreaterThan(0);

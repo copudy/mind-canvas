@@ -118,11 +118,20 @@ export default function Inspector({
                 }
               >
                 <option value="">自動</option>
-                {(["left", "right", "top", "bottom"] as Side[]).map((s, i) => (
-                  <option key={s} value={s}>
-                    {["左", "右", "上", "下"][i]}
-                  </option>
-                ))}
+                {(["left", "right", "top", "bottom"] as Side[])
+                  .filter(
+                    (s) =>
+                      !(key === "sourceSide"
+                        ? relation.sourceItem
+                        : relation.targetItem) ||
+                      s === "left" ||
+                      s === "right",
+                  )
+                  .map((s) => (
+                    <option key={s} value={s}>
+                      {{ left: "左", right: "右", top: "上", bottom: "下" }[s]}
+                    </option>
+                  ))}
               </select>
             </label>
           ))}
