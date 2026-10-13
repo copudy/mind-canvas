@@ -166,7 +166,14 @@ export function routeConnector(
   manualSource?: Side,
   manualTarget?: Side,
   waypoints?: Point[],
+  anchors?: { source?: Point; target?: Point },
 ): Route {
+  const endpoint = (r: Rect, side: Side) =>
+    r === source && anchors?.source
+      ? anchors.source
+      : r === target && anchors?.target
+        ? anchors.target
+        : port(r, side);
   const obstacles = [source, target, ...others].map((r) => ({
     ...r,
     x: r.x - 12,
@@ -180,14 +187,70 @@ export function routeConnector(
         s,
         t,
         score:
-          Math.abs(port(source, s).x - port(target, t).x) +
-          Math.abs(port(source, s).y - port(target, t).y),
+          Math.abs(endpoint(source, s).x - endpoint(target, t).x) +
+          Math.abs(endpoint(source, s).y - endpoint(target, t).y),
       })),
     )
     .sort((a, b) => a.score - b.score);
+  if (!waypoints?.length) {
+    const candidates: { points: Point[]; s: Side; t: Side; score: number }[] =
+      [];
+    for (const { s, t } of pairs) {
+      const a = endpoint(source, s),
+        b = endpoint(target, t),
+        u = stub(a, s),
+        v = stub(b, t);
+      if (
+        [target, ...others].some((r) => segmentHits(a, u, r)) ||
+        [source, ...others].some((r) => segmentHits(v, b, r))
+      )
+        continue;
+      const mx = (u.x + v.x) / 2,
+        my = (u.y + v.y) / 2;
+      for (const middle of [
+        [u, v],
+        [u, { x: u.x, y: v.y }, v],
+        [u, { x: v.x, y: u.y }, v],
+        [u, { x: mx, y: u.y }, { x: mx, y: v.y }, v],
+        [u, { x: u.x, y: my }, { x: v.x, y: my }, v],
+      ]) {
+        if (
+          middle.some(
+            (p, i) =>
+              i > 0 && obstacles.some((r) => segmentHits(middle[i - 1], p, r)),
+          )
+        )
+          continue;
+        const points = simplify([a, ...middle, b]);
+        const score =
+          points.reduce(
+            (sum, p, i) =>
+              i
+                ? sum +
+                  Math.abs(p.x - points[i - 1].x) +
+                  Math.abs(p.y - points[i - 1].y)
+                : 0,
+            0,
+          ) +
+          (points.length - 2) * 32;
+        candidates.push({ points, s, t, score });
+      }
+    }
+    if (candidates.length) {
+      candidates.sort((a, b) => a.score - b.score);
+      const c = candidates[0];
+      return {
+        points: c.points,
+        path: roundedPath(c.points),
+        sourceSide: c.s,
+        targetSide: c.t,
+        blocked: false,
+      };
+    }
+  }
   for (const { s, t } of pairs) {
-    const a = port(source, s),
-      b = port(target, t),
+    const a = endpoint(source, s),
+      b = endpoint(target, t),
       start = stub(a, s),
       end = stub(b, t);
     if (
@@ -219,8 +282,8 @@ export function routeConnector(
   }
   // Overlapping objects may make a collision-free connection geometrically impossible.
   const { s, t } = pairs[0],
-    a = port(source, s),
-    b = port(target, t),
+    a = endpoint(source, s),
+    b = endpoint(target, t),
     start = stub(a, s),
     end = stub(b, t);
   const outside = Math.min(source.y, target.y, ...others.map((r) => r.y)) - 40;

@@ -16,14 +16,25 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(moduleId) {
+          moduleId = moduleId.replace(/\\/g, "/");
           if (moduleId.includes("node_modules")) {
+            if (
+              moduleId.includes("@tiptap") ||
+              moduleId.includes("prosemirror") ||
+              moduleId.includes("/marked/")
+            )
+              return "editor";
             if (
               moduleId.includes("@xyflow") ||
               moduleId.includes("d3-") ||
               moduleId.includes("zustand")
             )
               return "canvas";
-            if (moduleId.includes("react") || moduleId.includes("scheduler"))
+            if (
+              moduleId.includes("/react/") ||
+              moduleId.includes("/react-dom/") ||
+              moduleId.includes("/scheduler/")
+            )
               return "react";
           }
         },

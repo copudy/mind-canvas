@@ -8,6 +8,11 @@ export interface Point {
   y: number;
 }
 export interface Item {
+  rich?: import("./rich").RichNode;
+  textRole?: "paragraph" | "heading" | "list";
+  italic?: boolean;
+  textAlign?: "left" | "center" | "right";
+  callout?: { title: string; icon: string; accent: string };
   widget?: import("./widgets").Widget;
   treeStyle?: { color: string; width: number; dashed: boolean };
   floating?: boolean;
@@ -36,6 +41,8 @@ export interface Item {
   calcError: string;
 }
 export interface Relation {
+  sourceItem?: string;
+  targetItem?: string;
   id: string;
   source: string;
   target: string;
@@ -80,27 +87,17 @@ export function makeItem(kind: Kind, position: Point, text = ""): Item {
         calculator: "計算機",
       }[kind],
     position,
-    width: kind === "calculator" ? 280 : kind === "sticky" ? 200 : 180,
-    height: kind === "calculator" ? 430 : kind === "sticky" ? 130 : 56,
+    width: kind === "calculator" ? 280 : kind === "sticky" ? 240 : 240,
+    height: kind === "calculator" ? 430 : kind === "sticky" ? 150 : 96,
     autoSize: kind !== "calculator",
-    maxWidth: 320,
+    maxWidth: 480,
     parentId: null,
     order: 0,
     collapsed: false,
     mode: "Free",
     layout: "right",
-    background:
-      kind === "sticky"
-        ? "#fff1bf"
-        : kind === "text"
-          ? "transparent"
-          : "#ffffff",
-    border:
-      kind === "text"
-        ? "transparent"
-        : kind === "sticky"
-          ? "#e7d99f"
-          : "#c5d5ef",
+    background: kind === "sticky" ? "#fff1bf" : "#ffffff",
+    border: kind === "sticky" ? "#e7d99f" : "#c5d5ef",
     color: "#293b35",
     fontSize: 16,
     bold: false,

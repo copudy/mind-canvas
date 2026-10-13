@@ -1,7 +1,14 @@
 import { makeItem, type Point } from "./model";
+export interface CellStyle {
+  background?: string;
+  color?: string;
+  align?: "left" | "center" | "right";
+  bold?: boolean;
+  italic?: boolean;
+}
 export type Widget =
   | { type: "icon"; symbol: string }
-  | { type: "table"; cells: string[][] }
+  | { type: "table"; cells: string[][]; styles?: Record<string, CellStyle> }
   | {
       type: "calendar";
       year: number;
@@ -60,6 +67,30 @@ export function validWidget(v: unknown): v is Widget {
       cells.length >= 2 &&
       cells.length <= 12 &&
       Array.isArray(cells[0]) &&
+      (w.styles === undefined ||
+        (!!w.styles &&
+          typeof w.styles === "object" &&
+          !Array.isArray(w.styles) &&
+          Object.entries(w.styles).length <= 120 &&
+          Object.entries(w.styles).every(([key, v]) => {
+            const [r, c] = key.split(":").map(Number);
+            if (
+              !/^\d{1,2}:\d{1,2}$/.test(key) ||
+              r >= cells.length ||
+              c >= cells[0].length ||
+              !v ||
+              typeof v !== "object"
+            )
+              return false;
+            return Object.entries(v).every(([k, x]) =>
+              ["background", "color"].includes(k)
+                ? typeof x === "string" &&
+                  (/^#[0-9a-fA-F]{6}$/.test(x) || x === "transparent")
+                : k === "align"
+                  ? ["left", "center", "right"].includes(String(x))
+                  : ["bold", "italic"].includes(k) && typeof x === "boolean",
+            );
+          }))) &&
       cells.every(
         (row) =>
           Array.isArray(row) &&
@@ -109,8 +140,8 @@ export function makeWidget(type: Widget["type"], position: Point) {
         ["第二項", "", ""],
       ],
     };
-    n.width = 440;
-    n.height = 260;
+    n.width = 520;
+    n.height = 360;
   }
   if (type === "calendar") {
     const t = new Date();
@@ -125,4 +156,20 @@ export function makeWidget(type: Widget["type"], position: Point) {
     n.height = 435;
   }
   return n;
+}
+
+export function resizeTable(
+  w: Extract<Widget, { type: "table" }>,
+  cells: string[][],
+) {
+  return {
+    ...w,
+    cells,
+    styles: Object.fromEntries(
+      Object.entries(w.styles || {}).filter(([key]) => {
+        const [r, c] = key.split(":").map(Number);
+        return r < cells.length && c < cells[0].length;
+      }),
+    ),
+  };
 }

@@ -209,25 +209,7 @@ export default function ToolLibrary({
           {category === "思考框架" && (
             <>
               {tool("我的範本", Layout, myTemplates)}
-              {tool(
-                "心智圖節點",
-                GitBranch,
-                () => add("mind"),
-                false,
-                "新增心智圖節點",
-              )}
               {tool("心智圖範本", Network, () => template("mind"))}
-              {tool("流程圖範本", Layout, () => template("flow"))}
-              {officialTemplates.map((t) =>
-                tool(
-                  t.name,
-                  Network,
-                  () => insertTemplate(t),
-                  false,
-                  t.name,
-                  t,
-                ),
-              )}
             </>
           )}
           {category === "文字筆記" && (
@@ -239,9 +221,7 @@ export default function ToolLibrary({
               )}
               {tool("圖示", Smile, () => widget("icon"))}
               {tool("表格", Table2, () => widget("table"))}
-              {tool("引用", Quote, () =>
-                add("text", "「留下一句值得記住的話。」"),
-              )}
+              {tool("Callout", Quote, () => add("text", "新的 Callout"))}
             </>
           )}
           {category === "圖形圖表" && (

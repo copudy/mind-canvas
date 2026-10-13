@@ -1,3 +1,4 @@
+import { validRich, listIds } from "./rich";
 import { openDB, type DBSchema } from "idb";
 import { validWidget } from "./widgets";
 import { clone, id, type Board, type Item, type Relation } from "./model";
@@ -141,6 +142,17 @@ export function validateBoard(raw: unknown): Board {
         "calculator",
       ].includes(String(v.kind)) ||
       !str(v.text) ||
+      (v.rich !== undefined && !validRich(v.rich)) ||
+      (v.italic !== undefined && typeof v.italic !== "boolean") ||
+      (v.textAlign !== undefined &&
+        !["left", "center", "right"].includes(String(v.textAlign))) ||
+      (v.textRole !== undefined &&
+        !["paragraph", "heading", "list"].includes(String(v.textRole))) ||
+      (v.callout !== undefined &&
+        (!object(v.callout) ||
+          !str(v.callout.title, 200) ||
+          !str(v.callout.icon, 20) ||
+          !color(v.callout.accent))) ||
       (v.widget !== undefined && !validWidget(v.widget)) ||
       !point(v.position) ||
       !num(v.width, 40, 3000) ||
@@ -207,6 +219,16 @@ export function validateBoard(raw: unknown): Board {
       !color(v.color) ||
       !num(v.width, 1, 8) ||
       typeof v.dashed !== "boolean" ||
+      (v.sourceItem !== undefined &&
+        (!str(v.sourceItem, 100) ||
+          !listIds(map.get(String(v.source))?.rich).includes(
+            v.sourceItem as string,
+          ))) ||
+      (v.targetItem !== undefined &&
+        (!str(v.targetItem, 100) ||
+          !listIds(map.get(String(v.target))?.rich).includes(
+            v.targetItem as string,
+          ))) ||
       (v.sourceSide !== undefined &&
         !["left", "right", "top", "bottom"].includes(String(v.sourceSide))) ||
       (v.targetSide !== undefined &&
@@ -258,9 +280,24 @@ export function exportProject(
   return JSON.stringify(
     {
       format: "freeform-mind-canvas",
-      schemaVersion:
-        boards.some((b) => b.nodes.some((n) => n.widget)) ||
-        templates?.some((t) => t.document.nodes.some((n) => n.widget))
+      schemaVersion: [
+        ...boards,
+        ...(templates || []).map((t) => t.document),
+      ].some(
+        (b) =>
+          b.nodes.some(
+            (n) =>
+              n.rich ||
+              n.callout ||
+              n.textRole ||
+              n.italic ||
+              n.textAlign ||
+              (n.widget?.type === "table" && n.widget.styles),
+          ) || b.relations.some((r) => r.sourceItem || r.targetItem),
+      )
+        ? 4
+        : boards.some((b) => b.nodes.some((n) => n.widget)) ||
+            templates?.some((t) => t.document.nodes.some((n) => n.widget))
           ? 3
           : templates?.length
             ? 2
@@ -295,7 +332,8 @@ export function importProject(text: string): Board[] {
     raw.format !== "freeform-mind-canvas" ||
     (raw.schemaVersion !== 1 &&
       raw.schemaVersion !== 2 &&
-      raw.schemaVersion !== 3) ||
+      raw.schemaVersion !== 3 &&
+      raw.schemaVersion !== 4) ||
     !Array.isArray(raw.boards) ||
     !raw.boards.length ||
     raw.boards.length > 100

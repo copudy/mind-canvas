@@ -1,3 +1,8 @@
+import ResizeHandles from "./ResizeHandles";
+import { lazy, Suspense } from "react";
+const RichEditor = lazy(() => import("./RichEditor"));
+import RichView from "./RichView";
+import { listIds } from "../rich";
 import {
   createContext,
   useContext,
@@ -9,7 +14,6 @@ import {
 import CanvasWidget from "./CanvasWidget";
 import {
   Handle,
-  NodeResizer,
   useUpdateNodeInternals,
   Position,
   type Node,
@@ -43,6 +47,8 @@ export interface CanvasActions {
   resume: () => void;
   createBoard: () => void;
   dataSettings: () => void;
+  listMetrics: Record<string, Record<string, number>>;
+  setListMetrics: (id: string, ys: Record<string, number>) => void;
 }
 export const CanvasContext = createContext<CanvasActions>(null!);
 export type FlowNode = Node<{ item: Item; mountPreview?: string }, "canvas">;
@@ -199,6 +205,7 @@ export default function CanvasNode({
   data,
   selected,
 }: NodeProps<FlowNode>) {
+  const root = useRef<HTMLDivElement>(null);
   const item = data.item,
     actions = useContext(CanvasContext),
     editing = actions.editId === id;
@@ -217,6 +224,35 @@ export default function CanvasNode({
       textarea.current?.select();
     }
   }, [editing]);
+  useEffect(() => {
+    const measure = () => {
+      const el = root.current;
+      if (!el) return;
+      const box = el.getBoundingClientRect();
+      const scale = box.width / item.width;
+      if (!scale) return;
+      const ys: Record<string, number> = {};
+      el.querySelectorAll<HTMLElement>("li[data-list-id],li[data-id]").forEach(
+        (li) => {
+          const r = li.getBoundingClientRect();
+          const key = li.dataset.listId || li.dataset.id;
+          if (key) ys[key] = (r.top - box.top + r.height / 2) / scale;
+        },
+      );
+      actions.setListMetrics(id, ys);
+      const content = el.querySelector<HTMLElement>(".rich-view,.rich-editor");
+      if (item.autoSize && content) {
+        const needed =
+          content.scrollHeight + (editing ? 78 : 36) + (item.callout ? 48 : 0);
+        if (needed > item.height + 2)
+          actions.patch(id, { height: Math.min(3000, needed) }, false);
+      }
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    if (root.current) observer.observe(root.current);
+    return () => observer.disconnect();
+  }, [item.rich, item.width, item.height, editing]);
   const commit = () => {
     if (draft !== item.text) actions.patch(id, { text: draft });
     actions.setEdit(null);
@@ -250,35 +286,110 @@ export default function CanvasNode({
         : item.color,
     fontSize: item.fontSize,
     fontWeight: item.bold ? 600 : 400,
+    fontStyle: item.italic ? "italic" : "normal",
+    textAlign: item.textAlign || "left",
   };
   return (
     <div
+      ref={root}
       className={`canvas-item ${item.kind} ${id === actions.guideEntryId || id === actions.guideBackupId ? "guide-entry-node" : ""} ${selected ? "is-selected" : ""} ${data.mountPreview ? "mount-preview" : ""}`}
       style={style}
     >
-      <NodeResizer
-        isVisible={selected && !editing && !actions.readOnly}
-        minWidth={minWidth}
-        minHeight={minHeight}
-        maxWidth={3000}
-        maxHeight={3000}
-        onResizeStart={() => {
-          actions.checkpoint();
-          actions.beginGesture();
-        }}
-        onResizeEnd={actions.endGesture}
-        onResize={(_, p) =>
-          actions.patch(
-            id,
-            {
-              width: Math.max(minWidth, p.width),
-              height: Math.max(minHeight, p.height),
-              autoSize: false,
-            },
-            false,
-          )
-        }
-      />
+      <div className="node-drag-grip" title="拖曳移動" aria-label="拖曳移動">
+        ⠿
+      </div>
+      {item.callout && (
+        <div
+          className="callout-heading nodrag"
+          onPointerDown={(e) => e.stopPropagation()}
+          style={{ borderColor: item.callout.accent }}
+        >
+          <select
+            aria-label="Callout 外觀預設"
+            value={item.callout.icon === "💬" ? "quote" : "note"}
+            onChange={(e) =>
+              actions.patch(id, {
+                background: e.target.value === "quote" ? "#f7f9fc" : "#eaf2ff",
+                border: e.target.value === "quote" ? "#8b9dc3" : "#3b82f6",
+                callout: {
+                  ...item.callout!,
+                  icon: e.target.value === "quote" ? "💬" : "💡",
+                  accent: e.target.value === "quote" ? "#8b9dc3" : "#3b82f6",
+                  title: e.target.value === "quote" ? "引言" : "提醒",
+                },
+              })
+            }
+          >
+            <option value="note">提示</option>
+            <option value="quote">引言</option>
+          </select>
+          <select
+            aria-label="Callout 圖示"
+            value={item.callout.icon}
+            onChange={(e) =>
+              actions.patch(id, {
+                callout: { ...item.callout!, icon: e.target.value },
+              })
+            }
+          >
+            {["💡", "📌", "⚠️", "💬", "✅"].map((s) => (
+              <option key={s}>{s}</option>
+            ))}
+          </select>
+          <input
+            aria-label="Callout 標題"
+            maxLength={200}
+            value={item.callout.title}
+            onChange={(e) =>
+              actions.patch(
+                id,
+                { callout: { ...item.callout!, title: e.target.value } },
+                false,
+              )
+            }
+            onFocus={actions.checkpoint}
+          />
+          <input
+            type="color"
+            aria-label="Callout 強調色"
+            value={item.callout.accent}
+            onChange={(e) =>
+              actions.patch(id, {
+                callout: { ...item.callout!, accent: e.target.value },
+              })
+            }
+          />
+        </div>
+      )}
+      {listIds(item.rich).map((li, i) => (
+        <span key={li}>
+          <Handle
+            type="source"
+            id={`item:${li}:right`}
+            position={Position.Right}
+            className="list-port"
+            aria-label="清單項目連線"
+            style={{
+              top:
+                actions.listMetrics[id]?.[li] || 36 + i * item.fontSize * 1.7,
+            }}
+          />
+          <Handle
+            type="target"
+            id={`item:${li}:left`}
+            position={Position.Left}
+            className="list-port"
+            style={{
+              top:
+                actions.listMetrics[id]?.[li] || 36 + i * item.fontSize * 1.7,
+            }}
+          />
+        </span>
+      ))}
+      {selected && !editing && !actions.readOnly && (
+        <ResizeHandles item={item} minWidth={minWidth} minHeight={minHeight} />
+      )}
+
       {(
         [
           ["left", Position.Left],
@@ -326,32 +437,27 @@ export default function CanvasNode({
           </fieldset>
         </>
       ) : editing ? (
-        <textarea
-          ref={textarea}
-          className="node-editor nodrag nowheel"
-          aria-label="編輯節點文字"
-          value={draft}
-          maxLength={10000}
-          onChange={(e) => setDraft(e.target.value)}
-          onBlur={commit}
-          onKeyDown={(e) => {
-            e.stopPropagation();
-            if (e.key === "Escape") {
-              setDraft(item.text);
-              actions.setEdit(null);
-            }
-            if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-              e.preventDefault();
-              commit();
-            }
-          }}
-        />
+        <Suspense fallback={<div role="status">載入編輯器…</div>}>
+          <RichEditor
+            item={item}
+            change={(rich) => actions.patch(id, { rich }, false)}
+            finish={() => actions.setEdit(null)}
+            checkpoint={actions.checkpoint}
+          />
+        </Suspense>
       ) : (
         <div
           className="node-text"
           onDoubleClick={() => !actions.readOnly && actions.setEdit(id)}
         >
-          {item.text}
+          {item.rich ? (
+            <RichView
+              doc={item.rich}
+              change={(rich) => actions.patch(id, { rich })}
+            />
+          ) : (
+            item.text
+          )}
         </div>
       )}
       {item.kind === "mind" && (

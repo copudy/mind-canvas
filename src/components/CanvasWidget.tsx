@@ -1,3 +1,5 @@
+import { useState, useRef } from "react";
+import { resizeTable, type CellStyle } from "../widgets";
 import type { Item } from "../model";
 import { calendarDays, dayKey, symbols, type Widget } from "../widgets";
 export default function CanvasWidget({
@@ -11,7 +13,47 @@ export default function CanvasWidget({
   checkpoint: () => void;
   edit: () => void;
 }) {
+  const [selectedCells, setCells] = useState<string[]>(["0:0"]);
+  const anchor = useRef<[number, number]>([0, 0]);
   const w = item.widget!;
+  const format = (style: CellStyle | null) => {
+    if (w.type !== "table") return;
+    const styles = { ...w.styles };
+    for (const key of selectedCells) {
+      if (style) styles[key] = { ...styles[key], ...style };
+      else delete styles[key];
+    }
+    update({ ...w, styles });
+  };
+  const select = (i: number, j: number, shift = false, multi = false) => {
+    const key = `${i}:${j}`;
+    if (shift) {
+      const [r, c] = anchor.current;
+      setCells(
+        w.type === "table"
+          ? w.cells.flatMap((row, a) =>
+              row.flatMap((_, b) =>
+                a >= Math.min(r, i) &&
+                a <= Math.max(r, i) &&
+                b >= Math.min(c, j) &&
+                b <= Math.max(c, j)
+                  ? [`${a}:${b}`]
+                  : [],
+              ),
+            )
+          : [],
+      );
+    } else {
+      anchor.current = [i, j];
+      setCells((old) =>
+        multi
+          ? old.includes(key)
+            ? old.filter((k) => k !== key)
+            : [...old, key]
+          : [key],
+      );
+    }
+  };
   const update = (widget: Widget, record = true) => patch({ widget }, record);
   return (
     <div className="canvas-widget">
@@ -53,20 +95,143 @@ export default function CanvasWidget({
         )}
         {w.type === "table" && (
           <>
+            <div className="table-format-controls">
+              <label>
+                底色
+                <input
+                  aria-label="儲存格背景色"
+                  type="color"
+                  value={
+                    w.styles?.[selectedCells[0]]?.background === "transparent"
+                      ? "#ffffff"
+                      : w.styles?.[selectedCells[0]]?.background || "#ffffff"
+                  }
+                  onChange={(e) => format({ background: e.target.value })}
+                />
+              </label>
+              <label>
+                字色
+                <input
+                  aria-label="儲存格文字色"
+                  type="color"
+                  value={w.styles?.[selectedCells[0]]?.color || "#23344c"}
+                  onChange={(e) => format({ color: e.target.value })}
+                />
+              </label>
+              <select
+                aria-label="儲存格對齊"
+                value={w.styles?.[selectedCells[0]]?.align || "left"}
+                onChange={(e) =>
+                  format({ align: e.target.value as CellStyle["align"] })
+                }
+              >
+                <option value="left">靠左</option>
+                <option value="center">置中</option>
+                <option value="right">靠右</option>
+              </select>
+              <button
+                aria-label="儲存格粗體"
+                onClick={() =>
+                  format({ bold: !w.styles?.[selectedCells[0]]?.bold })
+                }
+              >
+                B
+              </button>
+              <button
+                aria-label="儲存格斜體"
+                onClick={() =>
+                  format({ italic: !w.styles?.[selectedCells[0]]?.italic })
+                }
+              >
+                I
+              </button>
+              <button onClick={() => format(null)}>清除格式</button>
+              <small>Shift 點擊框選範圍 · Ctrl 多選</small>
+            </div>
             <div className="widget-table-scroll">
               <table
                 aria-label="可編輯表格"
                 style={{ minWidth: w.cells[0].length * 100 }}
               >
+                <thead>
+                  <tr>
+                    <th>
+                      <button
+                        aria-label="選取整張表格"
+                        onClick={() =>
+                          setCells(
+                            w.cells.flatMap((r, i) =>
+                              r.map((_, j) => `${i}:${j}`),
+                            ),
+                          )
+                        }
+                      >
+                        全部
+                      </button>
+                    </th>
+                    {w.cells[0].map((_, j) => (
+                      <th key={j}>
+                        <button
+                          aria-label={`選取第 ${j + 1} 欄`}
+                          onClick={() =>
+                            setCells(w.cells.map((_, i) => `${i}:${j}`))
+                          }
+                        >
+                          {String.fromCharCode(65 + j)}
+                        </button>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
                 <tbody>
                   {w.cells.map((row, i) => (
                     <tr key={i}>
+                      <th>
+                        <button
+                          aria-label={`選取第 ${i + 1} 列`}
+                          onClick={() =>
+                            setCells(row.map((_, j) => `${i}:${j}`))
+                          }
+                        >
+                          {i + 1}
+                        </button>
+                      </th>
                       {row.map((cell, j) => (
-                        <td key={j}>
+                        <td
+                          key={j}
+                          className={
+                            selectedCells.includes(`${i}:${j}`)
+                              ? "cell-selected"
+                              : ""
+                          }
+                          style={{
+                            background: w.styles?.[`${i}:${j}`]?.background,
+                            color: w.styles?.[`${i}:${j}`]?.color,
+                            textAlign: w.styles?.[`${i}:${j}`]?.align,
+                            fontWeight:
+                              w.styles?.[`${i}:${j}`]?.bold === false
+                                ? 400
+                                : w.styles?.[`${i}:${j}`]?.bold
+                                  ? 700
+                                  : undefined,
+                            fontStyle: w.styles?.[`${i}:${j}`]?.italic
+                              ? "italic"
+                              : "normal",
+                          }}
+                        >
                           <input
                             aria-label={`表格第 ${i + 1} 列第 ${j + 1} 欄`}
                             value={cell}
-                            onFocus={checkpoint}
+                            onPointerDown={(e) =>
+                              select(i, j, e.shiftKey, e.ctrlKey || e.metaKey)
+                            }
+                            style={{ textAlign: "inherit" }}
+                            onFocus={() => {
+                              checkpoint();
+                              setCells((old) =>
+                                old.includes(`${i}:${j}`) ? old : [`${i}:${j}`],
+                              );
+                            }}
                             maxLength={1000}
                             onChange={(e) => {
                               if (e.target.value !== cell) {
@@ -97,7 +262,7 @@ export default function CanvasWidget({
                     },
                     height: Math.max(
                       item.height,
-                      (w.cells.length + 1) * 42 + 100,
+                      (w.cells.length + 1) * 42 + 190,
                     ),
                   })
                 }
@@ -116,7 +281,7 @@ export default function CanvasWidget({
                 disabled={w.cells.length <= 2}
                 onClick={() => {
                   if (confirm("刪除最後一列及其內容？"))
-                    update({ ...w, cells: w.cells.slice(0, -1) });
+                    update(resizeTable(w, w.cells.slice(0, -1)));
                 }}
               >
                 －列
@@ -125,7 +290,12 @@ export default function CanvasWidget({
                 disabled={w.cells[0].length <= 2}
                 onClick={() => {
                   if (confirm("刪除最後一欄及其內容？"))
-                    update({ ...w, cells: w.cells.map((r) => r.slice(0, -1)) });
+                    update(
+                      resizeTable(
+                        w,
+                        w.cells.map((r) => r.slice(0, -1)),
+                      ),
+                    );
                 }}
               >
                 －欄

@@ -1,5 +1,13 @@
 # 開發進度與恢復
 
+## v1.3.0 UX 整合進行中（最新，尚未發布）
+
+使用者本次已授權全部安全檢查通過後直接部署；分支 feature/v1.3.0-ux，基準 main afa3642／正式 v1.2.0，Remote copudy/mind-canvas。文字 WYSIWYG（Tiptap 3.31.4／ProseMirror／Markdown／UniqueID）、可選 Rich JSON／外觀／Callout、清單穩定 ID 錨點、表格 cell styles、Pointer Capture 八方向縮放與較少轉折路由已整合。旧白板不自動轉 Markdown、不清除資料；新內容匯出容器4，讀1／2／3／4，Board及DB仍1。
+
+A：Lint／Build、70/70 單元與新 UX 5/5 瀏覽器專項通過（21.9秒）。原測試工具鏈安全告警已更新 Vitest5.0.4 修補，audit無告警；編輯器MIT，83 runtime套件授權告示已更新，編輯器獨立延後載入。
+
+未完成：觸控／不同縮放／密集連線更多驗證；更新舊測試到新需求（不新增心智圖節點與流程／分析框架入口，原文件用JSON驗證保留），完整回歸；資料相容與正式部署前檢查；推送／標記／部署與正式驗證。尚未 Push、建立 v1.3.0 Tag 或部署。任何核心／資料相容失敗都不可發布。先讀這段和 Git 狀態接續，不重建，不 reset 或清除資料。
+
 ## v1.2.0 正式上線完成（最新，2026-10-12）
 
 依使用者本次明確授權完成工具排序、框架預覽、圖示／表格／小日曆与便條紙分類後直接部署。正式 https://copudy.github.io/mind-canvas/ ，公開 Repository https://github.com/copudy/mind-canvas 。main，annotated Tag v1.2.0，發布 Commit `f77b80fb63384aa88432eca5ecaf0f4abb9de11b`。Actions https://github.com/copudy/mind-canvas/actions/runs/38157425825 success，舊版本標記保留，不 Force Push。

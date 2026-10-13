@@ -1,3 +1,5 @@
+import AppearanceBar from "./components/AppearanceBar";
+import { applyRich, listIds, listDoc, appearance } from "./rich";
 import { makeWidget, type Widget } from "./widgets";
 import GuidePage from "./components/GuidePage";
 import { useEffect, useRef, useState } from "react";
@@ -88,7 +90,6 @@ import { contextToolbarPosition } from "./contextToolbar";
 const nodeTypes = { canvas: CanvasNode },
   edgeTypes = { orthogonal: Connector };
 const tools = [
-  { kind: "mind", label: "心智圖節點", icon: GitBranch },
   { kind: "text", label: "自由文字", icon: Type },
   { kind: "sticky", label: "便條紙", icon: StickyNote },
   { kind: "rectangle", label: "矩形", icon: Square },
@@ -103,6 +104,9 @@ function Workbench() {
   const ws = useWorkspace(),
     rf = useReactFlow<FlowNode, FlowEdge>();
   const floating = ws.board?.nodes.find((n) => n.floating && !n.closed) || null;
+  const [listMetrics, setListMetrics] = useState<
+    Record<string, Record<string, number>>
+  >({});
   const [selected, setSelected] = useState<string[]>([]),
     [selectedEdge, setSelectedEdge] = useState<string | null>(null),
     [editId, setEdit] = useState<string | null>(null),
@@ -128,7 +132,7 @@ function Workbench() {
     [guide, setGuide] = useState<{ gx?: number; gy?: number }>({}),
     [deleteBoard, setDeleteBoard] = useState<string | null>(null),
     [notice, setNotice] = useState(""),
-    [inspector, setInspector] = useState(true),
+    [inspector, setInspector] = useState(false),
     [online, setOnline] = useState(navigator.onLine),
     [updateAvailable, setUpdateAvailable] = useState(false);
   const drag = useRef<DragState | null>(null),
@@ -162,6 +166,7 @@ function Workbench() {
       navigator.serviceWorker.removeEventListener("controllerchange", changed);
   }, []);
   useEffect(() => {
+    setListMetrics({});
     setSelected([]);
     setSelectedEdge(null);
     setEdit(null);
@@ -242,10 +247,17 @@ function Workbench() {
       const n = b.nodes.find((n) => n.id === nid);
       if (n) {
         Object.assign(n, p);
+        if (p.rich) applyRich(b, nid, p.rich);
         if (
-          ["text", "fontSize", "bold", "maxWidth", "autoSize"].some(
-            (k) => k in p,
-          )
+          [
+            "text",
+            "rich",
+            "fontSize",
+            "bold",
+            "italic",
+            "maxWidth",
+            "autoSize",
+          ].some((k) => k in p)
         )
           autosize(n);
         if (n.parentId && n.mode === "Auto" && ("text" in p || "autoSize" in p))
@@ -275,9 +287,23 @@ function Workbench() {
       n.position.x -= n.width / 2 - 80;
       n.position.y -= n.height / 2 - 30;
     }
+    if (kind === "text") n.textRole = "paragraph";
+    if (kind === "text" && text?.startsWith("• ")) {
+      n.textRole = "list";
+      n.rich = listDoc(text.split("\n").map((s) => s.replace(/^• /, "")));
+    }
+    if (kind === "text" && text === "新的 Callout") {
+      n.callout = { title: "提醒", icon: "💡", accent: "#3b82f6" };
+      n.text = "記下需要留意的事。";
+      n.background = "#eaf2ff";
+      n.border = "#3b82f6";
+    }
     if (kind === "text" && text === "新的標題") {
+      n.textRole = "heading";
+      n.background = "transparent";
+      n.border = "transparent";
       n.bold = true;
-      n.fontSize = 26;
+      n.fontSize = 28;
       n.maxWidth = 480;
     }
     autosize(n);
@@ -285,6 +311,7 @@ function Workbench() {
     setSelected([n.id]);
     setSelectedEdge(null);
     if (kind !== "calculator") setEdit(n.id);
+    if (!pos) focusItems([n]);
     return n.id;
   };
   const addWidget = (type: Widget["type"]) => {
@@ -391,7 +418,7 @@ function Workbench() {
   const addRelative = (sibling = false) => {
     const b = ws.current.current,
       n = b?.nodes.find((n) => n.id === selected[0]);
-    if (!b || !n || n.kind !== "mind") return;
+    if (!b || !n || !["mind", "text"].includes(n.kind) || n.widget) return;
     const parent = sibling ? n.parentId : n.id,
       newNode = makeItem(
         "mind",
@@ -402,6 +429,7 @@ function Workbench() {
     newNode.mode = parent ? "Auto" : "Free";
     newNode.order = sibling ? n.order + 1 : childrenOf(b, n.id).length;
     ws.update((d) => {
+      d.nodes.find((x) => x.id === n.id)!.kind = "mind";
       if (sibling)
         d.nodes
           .filter((x) => x.parentId === parent && x.order > n.order)
@@ -510,7 +538,17 @@ function Workbench() {
   const addRelation = (source: string, target: string, c?: Connection) => {
     if (source === target) return;
     ws.update((b) => {
-      if (!b.relations.some((r) => r.source === source && r.target === target))
+      if (
+        !b.relations.some(
+          (r) =>
+            r.source === source &&
+            r.target === target &&
+            r.sourceItem ===
+              (c?.sourceHandle?.startsWith("item:")
+                ? c.sourceHandle.split(":")[1]
+                : undefined),
+        )
+      )
         b.relations.push({
           id: id(),
           source,
@@ -518,8 +556,18 @@ function Workbench() {
           color: "#3b82f6",
           width: 2,
           dashed: false,
-          sourceSide: (c?.sourceHandle as Relation["sourceSide"]) || undefined,
-          targetSide: (c?.targetHandle as Relation["targetSide"]) || undefined,
+          sourceItem: c?.sourceHandle?.startsWith("item:")
+            ? c.sourceHandle.split(":")[1]
+            : undefined,
+          targetItem: c?.targetHandle?.startsWith("item:")
+            ? c.targetHandle.split(":")[1]
+            : undefined,
+          sourceSide: c?.sourceHandle?.startsWith("item:")
+            ? (c.sourceHandle.split(":")[2] as Relation["sourceSide"])
+            : (c?.sourceHandle as Relation["sourceSide"]) || undefined,
+          targetSide: c?.targetHandle?.startsWith("item:")
+            ? (c.targetHandle.split(":")[2] as Relation["targetSide"])
+            : (c?.targetHandle as Relation["targetSide"]) || undefined,
         });
     });
     setConnectSource(null);
@@ -529,6 +577,7 @@ function Workbench() {
     selected,
     selectedEdge,
     mount,
+    listMetrics,
   );
   const changes = (changes: NodeChange<FlowNode>[]) => {
     const selections = changes.filter((c) => c.type === "select");
@@ -661,6 +710,7 @@ function Workbench() {
   };
   const nodeClick: NodeMouseHandler<FlowNode> = (_, n) => {
     if (ws.current.current?.guide) return;
+    if (editId && editId !== n.id) setEdit(null);
     if (connectSource) {
       addRelation(connectSource, n.id);
       return;
@@ -838,6 +888,13 @@ function Workbench() {
   return (
     <CanvasContext.Provider
       value={{
+        listMetrics,
+        setListMetrics: (id, ys) =>
+          setListMetrics((prev) =>
+            JSON.stringify(prev[id]) === JSON.stringify(ys)
+              ? prev
+              : { ...prev, [id]: ys },
+          ),
         readOnly: !!board.guide,
         practice: () => void ws.add(),
         editId,
@@ -1302,6 +1359,22 @@ function Workbench() {
                   <Settings2 size={16} />
                 </button>
               </div>
+            )}
+            {selectedItem && !editId && (
+              <AppearanceBar
+                item={selectedItem}
+                patch={(p) =>
+                  ws.update((b) => {
+                    for (const n of b.nodes.filter((n) =>
+                      selected.includes(n.id),
+                    )) {
+                      Object.assign(n, p);
+                      autosize(n);
+                    }
+                  })
+                }
+                advanced={() => setInspector(true)}
+              />
             )}
             {inspector && (selected.length > 0 || selectedEdge) && (
               <Inspector

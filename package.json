@@ -1,6 +1,6 @@
 {
   "name": "freeform-mind-canvas",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,6 +12,10 @@
     "lint": "tsc -b && prettier --check src/**/*.{ts,tsx,css} tests/**/*.ts *.ts index.html"
   },
   "dependencies": {
+    "@tiptap/extension-unique-id": "^3.31.4",
+    "@tiptap/markdown": "^3.31.4",
+    "@tiptap/react": "^3.31.4",
+    "@tiptap/starter-kit": "^3.31.4",
     "@xyflow/react": "^12.11.1",
     "decimal.js": "^10.6.0",
     "idb": "^8.0.3",
@@ -29,6 +33,6 @@
     "typescript": "^5.9.0",
     "vite": "^7.1.0",
     "vite-plugin-pwa": "^1.0.3",
-    "vitest": "^3.2.0"
+    "vitest": "^5.0.4"
   }
 }

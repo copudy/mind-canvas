@@ -1,3 +1,4 @@
+import { listIds } from "./rich";
 import { useMemo } from "react";
 import { hiddenIds, type Board } from "./model";
 import { routeConnector, rectOf } from "./router";
@@ -8,6 +9,7 @@ export function useCanvasGraph(
   selected: string[],
   selectedEdge: string | null,
   mount: { id: string; index: number } | null,
+  listMetrics: Record<string, Record<string, number>> = {},
 ) {
   const hidden = useMemo(
     () => (board ? hiddenIds(board) : new Set<string>()),
@@ -44,6 +46,8 @@ export function useCanvasGraph(
       n.height,
       n.parentId,
       n.treeStyle,
+      listIds(n.rich),
+      listMetrics[n.id],
     ]),
     board?.relations,
     board?.treeStyle,
@@ -65,6 +69,8 @@ export function useCanvasGraph(
             return p.treeStyle || board.treeStyle;
           })(),
           tree: true,
+          sourceItem: undefined,
+          targetItem: undefined,
           sourceSide: undefined,
           targetSide: undefined,
           waypoints: undefined,
@@ -75,21 +81,57 @@ export function useCanvasGraph(
       .map((r) => {
         const a = map.get(r.source)!,
           b = map.get(r.target)!;
+        const anchor = (
+          n: typeof a,
+          key: string | undefined,
+          side: "left" | "right",
+        ) =>
+          key
+            ? {
+                x: n.position.x + (side === "right" ? n.width : 0),
+                y:
+                  n.position.y +
+                  (listMetrics[n.id]?.[key] ??
+                    36 +
+                      Math.max(0, listIds(n.rich).indexOf(key)) *
+                        n.fontSize *
+                        1.7),
+              }
+            : undefined;
+        const sourceSide = r.sourceItem
+          ? r.sourceSide || "right"
+          : r.sourceSide;
+        const targetSide = r.targetItem ? r.targetSide || "left" : r.targetSide;
+        const sourceAnchor = anchor(
+            a,
+            r.sourceItem,
+            sourceSide === "left" ? "left" : "right",
+          ),
+          targetAnchor = anchor(
+            b,
+            r.targetItem,
+            targetSide === "right" ? "right" : "left",
+          );
         const route = routeConnector(
           rectOf(a),
           rectOf(b),
           visible.filter((n) => n.id !== a.id && n.id !== b.id).map(rectOf),
-          r.sourceSide,
-          r.targetSide,
+          sourceSide,
+          targetSide,
           r.waypoints,
+          { source: sourceAnchor, target: targetAnchor },
         );
         return {
           id: r.id,
           type: "orthogonal" as const,
           source: r.source,
           target: r.target,
-          sourceHandle: route.sourceSide,
-          targetHandle: route.targetSide,
+          sourceHandle: r.sourceItem
+            ? `item:${r.sourceItem}:${r.sourceSide || "right"}`
+            : route.sourceSide,
+          targetHandle: r.targetItem
+            ? `item:${r.targetItem}:${r.targetSide || "left"}`
+            : route.targetSide,
           selectable: !r.tree,
           data: { path: route.path, blocked: route.blocked, tree: r.tree },
           style: {
