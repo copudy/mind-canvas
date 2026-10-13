@@ -1,6 +1,6 @@
 # PD-1 Center | Mind Canvas
 
-**v1.3.0 發布候選**：Markdown 所見即所得、八方向縮放與外觀快捷列、清單項目連線、表格局部格式、Callout、精簡框架與正交路由。最新成果及限制見 [V13_REPORT.md](V13_REPORT.md)，正式部署結果見 [HANDOFF.md](HANDOFF.md)。新格式 JSON 版本 4 請以 v1.3 或更新版還原。下方保留舊版發布紀錄。
+**v1.3.0 已正式上線**：[開啟 Mind Canvas](https://copudy.github.io/mind-canvas/)。Markdown 所見即所得、八方向縮放與外觀快捷列、清單項目連線、表格局部格式、Callout、精簡框架與正交路由。最新成果及限制見 [V13_REPORT.md](V13_REPORT.md)，正式部署結果見 [HANDOFF.md](HANDOFF.md)。本機74單元／64瀏覽器、正式15瀏覽器通過。新格式 JSON 版本 4 請以 v1.3 或更新版還原。下方保留舊版發布紀錄。
 
 正式已上線 **v1.2.0**：思考框架常用入口優先、游標用途與結構預覽；文字筆記新增圖示／表格，便條紙移至實用工具，新增可記記事的小日曆。新工具完整備份使用格式 3，請用新版還原。詳見 [V12_REPORT.md](V12_REPORT.md) 與 [部署狀態](DEPLOYMENT.md)。以下為前版歷史紀錄。
 

@@ -19,6 +19,7 @@ npm.cmd run test:e2e
 
 ```powershell
 npx.cmd playwright test --config playwright.production.config.ts
+node scripts/verify-production-assets.mjs
 ```
 
 7. 驗證指南、建立／編輯／切換、JSON副本還原、IndexedDB、刷新、SW範圍與離線寫入。OS安裝與實體手機另列手動驗證，不把Actions綠燈當成全部驗收。

@@ -1,5 +1,13 @@
 # Mind Canvas v1.0.0 部署紀錄
 
+## v1.3.0 正式部署完成（最新，2026-10-13）
+
+正式 https://copudy.github.io/mind-canvas/ · Repository https://github.com/copudy/mind-canvas 。main、Tag v1.3.0、發布SHA `9cd3526d5824a27188086cf9b9c96df50480c35a`；正常原子Push，無Force或舊Tag覆寫。
+
+Actions https://github.com/copudy/mind-canvas/actions/runs/38357876313 的build／deploy success；CI Lint、74單元及PWA Build通過。本機64/64瀏覽器，正式15/15（1.1分鐘）；正式data-version1.3.0與品牌／資源／Markdown／項目錨點／表格／Callout／IDB／JSON／PWA離線通過。14資源驗證與SW AST／快取版本見artifacts/production-assets-1.3.0.json。
+
+舊v1.2原始client同origin SW升級資料完整比對通過，DB仍1，格式4須新版還原。未驗證實體IME／手機／OS安裝、配額逐出與斷電；官方Markdown套件Beta子集限制與其餘風險見V13_REPORT。此次發布完成，後續版本另取授權。
+
 ## v1.2.0 正式上線完成（最新，2026-10-12）
 
 依使用者本次明確授權完成工具排序、框架預覽、圖示／表格／小日曆与便條紙分類後直接部署。正式 https://copudy.github.io/mind-canvas/ ，公開 Repository https://github.com/copudy/mind-canvas 。main，annotated Tag v1.2.0，發布 Commit `f77b80fb63384aa88432eca5ecaf0f4abb9de11b`。Actions https://github.com/copudy/mind-canvas/actions/runs/38157425825 success，舊版本標記保留，不 Force Push。

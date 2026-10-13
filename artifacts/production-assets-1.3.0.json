@@ -1,0 +1,112 @@
+{
+  "version": "1.3.0",
+  "commit": "9cd3526d5824a27188086cf9b9c96df50480c35a",
+  "checkedAt": "2026-10-13T06:45:08.848Z",
+  "url": "https://copudy.github.io/mind-canvas/",
+  "serviceWorker": {
+    "sameProgramAndAssetPaths": true,
+    "revisionsValidated": true,
+    "comparison": "AST after lexical binding normalization",
+    "difference": "precache ordering, minifier local variable names, THIRD_PARTY_NOTICES.txt CRLF/LF"
+  },
+  "assets": [
+    {
+      "path": "./assets/index-CsXy4Tca.js",
+      "status": 200,
+      "sha256": "a30b7cf58c800d9c73d065a78be75bc1f5954ca6a099382cd1b5c217041999ee",
+      "matchesTestedBuild": true,
+      "comparison": "byte-for-byte"
+    },
+    {
+      "path": "./assets/react-CJVUN1p8.js",
+      "status": 200,
+      "sha256": "99572f411a11b9d281ef231068993ddd1338c95b568a675fc35c1e28ad18cc08",
+      "matchesTestedBuild": true,
+      "comparison": "byte-for-byte"
+    },
+    {
+      "path": "./assets/canvas-B54sUlEJ.js",
+      "status": 200,
+      "sha256": "bbde53a383de610ccdad604f314e62000a9395ab8a560640b4c15a4f24720fec",
+      "matchesTestedBuild": true,
+      "comparison": "byte-for-byte"
+    },
+    {
+      "path": "./assets/canvas-BnuhLJ6X.css",
+      "status": 200,
+      "sha256": "1243b61a71923367ce620fb944427c80c9b03e863e18374fcf4f74d6d06f63fc",
+      "matchesTestedBuild": true,
+      "comparison": "byte-for-byte"
+    },
+    {
+      "path": "./assets/index-DIPiuA4d.css",
+      "status": 200,
+      "sha256": "a434792aad28720d1062b411fd5a797c849266c9d327e7db40ecabe59e6e3522",
+      "matchesTestedBuild": true,
+      "comparison": "byte-for-byte"
+    },
+    {
+      "path": "./index.html",
+      "status": 200,
+      "sha256": "da672e4052f0298ad1c6c1e7bc939e18d9a3fc15de2e24cd7bf2e7807e54cd27",
+      "matchesTestedBuild": true,
+      "comparison": "byte-for-byte"
+    },
+    {
+      "path": "./icon.svg",
+      "status": 200,
+      "sha256": "567e87b1f4c968a349c3cf03dcae7c943376a85cc7fcbf2ad3680867cedd2c47",
+      "matchesTestedBuild": true,
+      "comparison": "byte-for-byte"
+    },
+    {
+      "path": "./icon-512.png",
+      "status": 200,
+      "sha256": "750c52529a5a83f173d52a4a3e57356fdb42c79fc33852b9c79bb72ff23b2f14",
+      "matchesTestedBuild": true,
+      "comparison": "byte-for-byte"
+    },
+    {
+      "path": "./icon-192.png",
+      "status": 200,
+      "sha256": "0049922489334e774afcd2978c54152cac154cfb62c28486cfe868a4404f1240",
+      "matchesTestedBuild": true,
+      "comparison": "byte-for-byte"
+    },
+    {
+      "path": "./THIRD_PARTY_NOTICES.txt",
+      "status": 200,
+      "sha256": "e93e7af321c9179ccce1ec16162d2c73baa0e52395e4572dcb2030a70f82652a",
+      "matchesTestedBuild": true,
+      "comparison": "line-ending-normalized"
+    },
+    {
+      "path": "./assets/editor-CNkwGS1o.js",
+      "status": 200,
+      "sha256": "bc064f8e9f1f0029a338a991f74d690789e275bd60823324d172372d2453c11b",
+      "matchesTestedBuild": true,
+      "comparison": "byte-for-byte"
+    },
+    {
+      "path": "./assets/RichEditor-DoOVcWvX.js",
+      "status": 200,
+      "sha256": "bd85f135f51b31dff5e19ac12c1f16e668dd95f86d3a5b6b38dacbab84f07864",
+      "matchesTestedBuild": true,
+      "comparison": "byte-for-byte"
+    },
+    {
+      "path": "./manifest.webmanifest",
+      "status": 200,
+      "sha256": "c082571d5449164b10a602c0d9222ce0bf0882b1c602128783475f36d6e7f00f",
+      "matchesTestedBuild": true,
+      "comparison": "byte-for-byte"
+    },
+    {
+      "path": "./workbox-9c191d2f.js",
+      "status": 200,
+      "sha256": "04b086f1b2f4215ee4b659a7bc9c76162894abdb43fa876247bc7c0bd6fd1c37",
+      "matchesTestedBuild": true,
+      "comparison": "byte-for-byte"
+    }
+  ]
+}

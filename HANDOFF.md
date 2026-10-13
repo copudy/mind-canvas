@@ -1,5 +1,17 @@
 # Mind Canvas 安全交接
 
+## v1.3.0 正式上線完成（最新，2026-10-13）
+
+依使用者本次全功能任務授權已正常發布。正式 https://copudy.github.io/mind-canvas/ ，PUBLIC Repository https://github.com/copudy/mind-canvas 。main、annotated Tag v1.3.0，發布 Commit `9cd3526d5824a27188086cf9b9c96df50480c35a`，開發里程碑 aed8367 保留，v1.2.0／所有舊Tag不移動，未Force或清資料。Actions https://github.com/copudy/mind-canvas/actions/runs/38357876313 ，build／deploy均success，CI含Lint／74單元／Build。
+
+A／實測：本機型別／Lint／Build、74/74單元、64/64完整瀏覽器（3.6分鐘）；正式 **15/15（1.1分鐘）**。正式data-version1.3.0、標題／Logo、指南、建立／編輯／切換／JSON／IDB、Markdown、八向縮放、外觀Undo、清單項目連線／排序／刪除復原、表格局部格式、Callout、觸控模擬、PWA離線首次載入編輯器全部通過。14正式資源驗證，JS／CSS／圖示／Workbox／manifest與已測Build逐位元一致；授權文字僅CRLF/LF不同。SW經詞法binding正規化後AST一致，快取路徑及revision完整核對；跨平台差異僅排序、變數名與授權文字換行。
+
+資料：DB／Board版本仍1、JSON讀1～4；實際v1.2 client同origin更新SW，非指南白板與自訂範本逐字段保持不變。新內容格式4须v1.3+還原；不自動解析舊原文、不覆寫白板或刪除框架。完整說明V13_REPORT、TEST_REPORT，資源實測artifacts/production-assets-1.3.0.json。無新增雲端服務。
+
+E／限制：實體IME／手機鍵盤／OS PWA安裝、真實配額／逐出／斷電未驗證；Markdown官方Beta，只承諾已測子集。任意完全重疊布局零交叉不保證；多分頁無合併。Actions固定SHA成功，但configure/upload/deploy頁面Actions仍有Node20→24過渡提醒，後續維護再核對官方更新，不於本輪擴大修改。
+
+下一Session先讀本節／V13_REPORT及Git狀態再接使用者問題。此次發布完成，後續更新需另取授權；文件與實測截圖補記在發布後正常提交，不挪動v1.3.0。SOP見RELEASE_SOP；正式資源驗證可在build後執行 `node scripts/verify-production-assets.mjs`，需要本機當版Tag。不要清除網站資料來更新，若快取仍舊，關閉本站分頁後重開／重新整理；先定期完整備份。
+
 ## v1.3.0 最終回歸與發布準備（最新，2026-10-13）
 
 接續中斷的 feature/v1.3.0-ux，已保存 aed8367 的開發里程碑；main／origin/main 都為 afa364221600d7cbd718ee1c4cc49526264f819f，v1.2.0 Tag 不移動。使用者已授權本次全部安全條件通過後正式發布。gh 已確認 copudy、PUBLIC／ADMIN、repo／workflow scopes，Remote https://github.com/copudy/mind-canvas.git ，尚無 v1.3.0 Tag。

@@ -1,6 +1,6 @@
 # v1.3.0 全功能 UX 與格式文字
 
-目前為發布候選；正式部署結果以 HANDOFF.md／DEPLOYMENT.md 最新紀錄為準。沿用 v1.2.0、原 IndexedDB 與現有 React／XYFlow 架構，未重建白板或清除資料。
+已正式發布 v1.3.0；SHA `9cd3526d5824a27188086cf9b9c96df50480c35a`，Actions https://github.com/copudy/mind-canvas/actions/runs/38357876313 build／deploy success；本機74單元／64瀏覽器與正式15瀏覽器全部通過。正式部署紀錄以 HANDOFF.md／DEPLOYMENT.md 最新段為準。沿用 v1.2.0、原 IndexedDB 與現有 React／XYFlow 架構，未重建白板或清除資料。
 
 ## 九項成果
 
